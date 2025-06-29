@@ -600,7 +600,7 @@
                 </div>
                 <div class="badge">
                     <i class="fas fa-star"></i>
-                    Military-Grade Hybrid Encryption v2.1
+                    Military-Grade Hybrid Encryption v3.0
                 </div>
             </div>
 
@@ -869,7 +869,7 @@
             </div>
 
             <div class="footer">
-                <p>CryptoVault Neo Pro v2.1 | Hybrid AES-256-GCM + Dynamic S-Box | PBKDF2-HMAC-SHA512 | © 2023</p>
+                <p>CryptoVault Neo Pro v3.0 | Hybrid AES-256-GCM + Dynamic S-Box | PBKDF2-HMAC-SHA512 | © 2023</p>
                 <p>All cryptographic operations performed locally - no data leaves your browser | FIPS 140-3 Compliant</p>
             </div>
         </div>
@@ -897,7 +897,6 @@
             }
             
             secureCopy(data) {
-                // Constant-time копирование данных
                 for (let i = 0; i < this.length; i++) {
                     this.buffer[i] = data[i];
                 }
@@ -908,7 +907,6 @@
             }
             
             clear() {
-                // Гарантированное зануление памяти
                 for (let i = 0; i < this.length; i++) {
                     this.buffer[i] = 0;
                 }
@@ -937,11 +935,9 @@
                     this.sboxes.push(sbox);
                     this.inverseSboxes.push(inverse);
                     
-                    // Обновляем UI
                     utils.updateRoundIndicators(round + 1);
                     utils.updateProgress((round + 1) * 100 / CRYPTO_CONFIG.sboxRounds, 'encrypt');
                     
-                    // Имитация вычислительной нагрузки
                     await utils.delay(20);
                 }
             }
@@ -950,7 +946,6 @@
                 const encoder = new TextEncoder();
                 const seedBuffer = encoder.encode(seed);
                 
-                // Используем HKDF для криптографически стойкой генерации
                 const baseKey = await crypto.subtle.importKey(
                     "raw",
                     seedBuffer,
@@ -967,7 +962,7 @@
                         hash: "SHA-512"
                     },
                     baseKey,
-                    2048 // 256 байт
+                    2048
                 );
                 
                 const sboxArray = new Uint8Array(sboxBits);
@@ -992,7 +987,6 @@
                 for (let i = 0; i < boxes.length; i++) {
                     result = this.applyConstantTimeSBox(result, boxes[i]);
                     
-                    // Обновление прогресса
                     const progress = (i + 1) * 100 / boxes.length;
                     utils.updateProgress(progress, encrypt ? 'encrypt' : 'decrypt');
                     
@@ -1003,21 +997,22 @@
             }
             
             applyConstantTimeSBox(data, sbox) {
-                // Constant-time реализация для защиты от атак по времени
                 const result = new Uint8Array(data.length);
+                const len = data.length;
                 
-                for (let byteVal = 0; byteVal < 256; byteVal++) {
-                    for (let j = 0; j < data.length; j++) {
-                        const mask = this.ctEq(data[j], byteVal);
-                        result[j] = this.ctSelect(mask, sbox[byteVal], result[j]);
+                for (let i = 0; i < len; i++) {
+                    let val = 0;
+                    for (let j = 0; j < 256; j++) {
+                        const mask = this.ctEq(data[i], j);
+                        val = this.ctSelect(mask, sbox[j], val);
                     }
+                    result[i] = val;
                 }
                 
                 return result;
             }
             
             ctEq(a, b) {
-                // Constant-time сравнение
                 let diff = a ^ b;
                 diff |= diff >> 4;
                 diff |= diff >> 2;
@@ -1026,7 +1021,6 @@
             }
             
             ctSelect(mask, a, b) {
-                // Constant-time выбор
                 return b ^ (mask & (a ^ b));
             }
         }
@@ -1038,114 +1032,105 @@
             }
             
             async encrypt(plaintext, password) {
-                // Инициализация S-Box
-                utils.showStatus("Generating S-Boxes...", "encrypt-status", "processing");
-                await this.sboxProcessor.generateSBoxes(password);
+                // 1. Подготовка ключа
+                const keyMaterial = await this.deriveKeyMaterial(password);
                 
-                // Обработка данных через S-Box
-                utils.showStatus("Processing data with S-Box...", "encrypt-status", "processing");
+                // 2. Обработка данных через S-Box
                 const textData = new TextEncoder().encode(plaintext);
                 const sboxProcessed = await this.sboxProcessor.processData(textData, true);
                 
-                // Шифрование AES-GCM
-                utils.showStatus("Encrypting with AES-256-GCM...", "encrypt-status", "processing");
-                const { encrypted, iv, salt } = await this.aesGcmEncrypt(sboxProcessed, password);
-                
-                // Формирование результата (соль + IV + зашифрованные данные)
-                const result = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
-                result.set(salt, 0);
-                result.set(iv, salt.length);
-                result.set(new Uint8Array(encrypted), salt.length);
-                
-                // Очистка конфиденциальных данных
-                this.secureClear(textData);
-                this.secureClear(sboxProcessed);
-                
-                return result;
-            }
-            
-            async decrypt(ciphertext, password) {
-                // Извлечение компонентов
-                const salt = ciphertext.slice(0, CRYPTO_CONFIG.saltLength);
-                const iv = ciphertext.slice(
-                    CRYPTO_CONFIG.saltLength, 
-                    CRYPTO_CONFIG.saltLength + CRYPTO_CONFIG.ivLength
-                );
-                const encryptedData = ciphertext.slice(CRYPTO_CONFIG.saltLength + CRYPTO_CONFIG.ivLength);
-                
-                // Инициализация S-Box
-                utils.showStatus("Generating S-Boxes...", "decrypt-status", "processing");
-                await this.sboxProcessor.generateSBoxes(password);
-                
-                // Дешифрование AES-GCM
-                utils.showStatus("Decrypting with AES-256-GCM...", "decrypt-status", "processing");
-                const decrypted = await this.aesGcmDecrypt(encryptedData, password, salt, iv);
-                
-                // Обратное преобразование S-Box
-                utils.showStatus("Processing data with inverse S-Box...", "decrypt-status", "processing");
-                const sboxProcessed = await this.sboxProcessor.processData(new Uint8Array(decrypted), false);
-                
-                // Преобразование в строку
-                const result = new TextDecoder().decode(sboxProcessed);
-                
-                // Очистка конфиденциальных данных
-                this.secureClear(decrypted);
-                this.secureClear(sboxProcessed);
-                
-                return result;
-            }
-            
-            async aesGcmEncrypt(data, password) {
-                const salt = crypto.getRandomValues(new Uint8Array(CRYPTO_CONFIG.saltLength));
-                const cryptoKey = await this.deriveKey(password, salt);
+                // 3. Шифрование AES-GCM
                 const iv = crypto.getRandomValues(new Uint8Array(CRYPTO_CONFIG.ivLength));
-                
                 const encrypted = await crypto.subtle.encrypt(
                     {
                         name: CRYPTO_CONFIG.algorithm,
                         iv: iv,
                         tagLength: CRYPTO_CONFIG.tagLength
                     },
-                    cryptoKey,
-                    data
+                    keyMaterial.cryptoKey,
+                    sboxProcessed
                 );
                 
-                return { encrypted, iv, salt };
+                // 4. Извлечение тега и шифртекста
+                const encryptedArray = new Uint8Array(encrypted);
+                const tag = encryptedArray.slice(-16);
+                const ciphertext = encryptedArray.slice(0, -16);
+                
+                // 5. Формирование результата
+                const result = new Uint8Array(
+                    keyMaterial.salt.length + 
+                    iv.length + 
+                    ciphertext.length +
+                    tag.length
+                );
+                
+                let offset = 0;
+                result.set(keyMaterial.salt, offset); offset += keyMaterial.salt.length;
+                result.set(iv, offset); offset += iv.length;
+                result.set(ciphertext, offset); offset += ciphertext.length;
+                result.set(tag, offset);
+                
+                return result;
             }
             
-            async aesGcmDecrypt(data, password, salt, iv) {
-                const cryptoKey = await this.deriveKey(password, salt);
+            async decrypt(ciphertext, password) {
+                // 1. Извлечение компонентов
+                const salt = ciphertext.slice(0, CRYPTO_CONFIG.saltLength);
+                const iv = ciphertext.slice(
+                    CRYPTO_CONFIG.saltLength, 
+                    CRYPTO_CONFIG.saltLength + CRYPTO_CONFIG.ivLength
+                );
+                const ciphertextData = ciphertext.slice(
+                    CRYPTO_CONFIG.saltLength + CRYPTO_CONFIG.ivLength,
+                    ciphertext.length - 16
+                );
+                const tag = ciphertext.slice(ciphertext.length - 16);
                 
+                // 2. Подготовка ключа
+                const keyMaterial = await this.deriveKeyMaterial(password, salt);
+                
+                // 3. Объединение ciphertext и тега
+                const encryptedData = new Uint8Array(ciphertextData.length + tag.length);
+                encryptedData.set(ciphertextData);
+                encryptedData.set(tag, ciphertextData.length);
+                
+                // 4. Дешифрование AES-GCM
+                let decrypted;
                 try {
-                    const decrypted = await crypto.subtle.decrypt(
+                    decrypted = await crypto.subtle.decrypt(
                         {
                             name: CRYPTO_CONFIG.algorithm,
                             iv: iv,
                             tagLength: CRYPTO_CONFIG.tagLength
                         },
-                        cryptoKey,
-                        data
+                        keyMaterial.cryptoKey,
+                        encryptedData
                     );
-                    
-                    return decrypted;
-                } catch (error) {
+                } catch (e) {
                     throw new Error("Decryption failed: Authentication tag verification failed");
                 }
+                
+                // 5. Обратное преобразование S-Box
+                const sboxProcessed = await this.sboxProcessor.processData(
+                    new Uint8Array(decrypted), 
+                    false
+                );
+                
+                return new TextDecoder().decode(sboxProcessed);
             }
             
-            async deriveKey(password, salt) {
-                const encoder = new TextEncoder();
-                const passwordBuffer = encoder.encode(password);
+            async deriveKeyMaterial(password, salt = null) {
+                salt = salt || crypto.getRandomValues(new Uint8Array(CRYPTO_CONFIG.saltLength));
                 
                 const baseKey = await crypto.subtle.importKey(
                     "raw",
-                    passwordBuffer,
+                    new TextEncoder().encode(password),
                     { name: "PBKDF2" },
                     false,
                     ["deriveKey"]
                 );
                 
-                return crypto.subtle.deriveKey(
+                const cryptoKey = await crypto.subtle.deriveKey(
                     {
                         name: "PBKDF2",
                         salt: salt,
@@ -1160,15 +1145,8 @@
                     false,
                     ["encrypt", "decrypt"]
                 );
-            }
-            
-            secureClear(data) {
-                if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
-                    const view = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-                    for (let i = 0; i < view.length; i++) {
-                        view[i] = 0;
-                    }
-                }
+                
+                return { cryptoKey, salt };
             }
         }
 
@@ -1210,7 +1188,6 @@
                     return;
                 }
                 
-                // Простой расчет энтропии
                 let entropy = 0;
                 const length = password.length;
                 const charTypes = {
@@ -1252,27 +1229,27 @@
                 switch(format) {
                     case 'hex':
                         return Array.from(data)
-                            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-                            .join(' ')
-                            .replace(/(.{8})/g, '$1 ')
-                            .trim();
+                            .map(b => b.toString(16).padStart(2, '0'))
+                            .join('')
+                            .match(/.{1,8}/g)
+                            ?.join(' ')
+                            .toUpperCase() || '';
                     
                     case 'bcd':
                         return Array.from(data)
                             .map(b => b.toString().padStart(3, '0'))
-                            .join(' ');
+                            .join(' ')
+                            .replace(/(.{12})/g, '$1\n');
                     
                     case 'military':
-                        return Array.from(data)
-                            .map(b => b.toString().padStart(3, '0'))
-                            .join('')
-                            .match(/.{1,5}/g)
-                            ?.join(' ') || '';
+                        const digits = Array.from(data).map(b => 
+                            b.toString().padStart(3, '0')).join('');
+                        const padded = digits.padEnd(Math.ceil(digits.length / 5) * 5, '0');
+                        return padded.match(/.{1,5}/g)?.join(' ') || '';
                     
                     case 'base64':
                     default:
-                        const binary = Array.from(data).map(b => String.fromCharCode(b)).join('');
-                        return btoa(binary);
+                        return btoa(String.fromCharCode(...data));
                 }
             },
             
@@ -1306,29 +1283,31 @@
                         if (cleanedInput.length % 2 !== 0) {
                             throw new Error("Hex input must have even number of characters");
                         }
-                        const hexBytes = [];
-                        for (let i = 0; i < cleanedInput.length; i += 2) {
-                            hexBytes.push(parseInt(cleanedInput.substr(i, 2), 16));
+                        const hexBytes = new Uint8Array(cleanedInput.length / 2);
+                        for (let i = 0; i < hexBytes.length; i++) {
+                            hexBytes[i] = parseInt(cleanedInput.substr(i*2, 2), 16);
                         }
-                        return new Uint8Array(hexBytes);
+                        return hexBytes;
                     case 'bcd':
                         if (cleanedInput.length % 3 !== 0) {
                             throw new Error("BCD input length must be multiple of 3");
                         }
-                        const bcdBytes = [];
-                        for (let i = 0; i < cleanedInput.length; i += 3) {
-                            bcdBytes.push(parseInt(cleanedInput.substr(i, 3), 10));
+                        const bcdBytes = new Uint8Array(cleanedInput.length / 3);
+                        for (let i = 0; i < bcdBytes.length; i++) {
+                            bcdBytes[i] = parseInt(cleanedInput.substr(i*3, 3), 10);
                         }
-                        return new Uint8Array(bcdBytes);
+                        return bcdBytes;
                     case 'military':
-                        if (cleanedInput.length % 3 !== 0) {
-                            throw new Error("Input length must be multiple of 3 for this format");
+                        const digits = cleanedInput.replace(/\D/g, '');
+                        const byteCount = Math.floor(digits.length / 3);
+                        if (digits.length % 3 !== 0) {
+                            throw new Error("Military code must have digit count divisible by 3");
                         }
-                        const numericBytes = [];
-                        for (let i = 0; i < cleanedInput.length; i += 3) {
-                            numericBytes.push(parseInt(cleanedInput.substr(i, 3), 10));
+                        const militaryBytes = new Uint8Array(byteCount);
+                        for (let i = 0; i < byteCount; i++) {
+                            militaryBytes[i] = parseInt(digits.substr(i*3, 3), 10);
                         }
-                        return new Uint8Array(numericBytes);
+                        return militaryBytes;
                     default:
                         throw new Error(`Unknown format: ${format}`);
                 }
@@ -1368,12 +1347,9 @@
                     return;
                 }
                 
-                // Блокировка интерфейса во время операции
                 document.getElementById('encrypt-button').disabled = true;
                 utils.updateRoundIndicators(0);
                 utils.updateProgress(0, 'encrypt');
-                
-                // Шифрование
                 utils.showStatus("Starting encryption process...", "encrypt-status", "processing");
                 document.getElementById('encrypted-result').innerHTML = '<span class="loader"></span> Initializing...';
                 
@@ -1404,18 +1380,13 @@
                     return;
                 }
                 
-                // Блокировка интерфейса во время операции
                 document.getElementById('decrypt-button').disabled = true;
                 utils.updateRoundIndicators(0);
                 utils.updateProgress(0, 'decrypt');
-                
-                // Парсинг входных данных
                 utils.showStatus("Parsing input data...", "decrypt-status", "processing");
                 document.getElementById('decrypted-result').innerHTML = '<span class="loader"></span> Initializing...';
                 
                 const binaryData = utils.parseInput(format, ciphertext);
-                
-                // Дешифрование
                 const decrypted = await cryptoSystem.decrypt(binaryData, key);
                 
                 document.getElementById('decrypted-result').textContent = decrypted;
@@ -1509,4 +1480,4 @@
         });
     </script>
 </body>
-                                                                          </html>
+</html>
