@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Шифрование текста "Чёрный Лебедь" с PBKDF2</title>
+    <title>Шифрование методом алгебры Клиффорда</title>
     <style>
         body {
             font-family: 'Courier New', monospace;
@@ -61,7 +61,6 @@
             margin-top: 15px;
             font-family: monospace;
             white-space: pre-wrap;
-            word-break: break-all;
         }
         .stats {
             display: grid;
@@ -80,23 +79,17 @@
             font-weight: bold;
             color: #58a6ff;
         }
-        .progress {
-            height: 20px;
-            background-color: #21262d;
-            border-radius: 10px;
-            margin: 10px 0;
-            overflow: hidden;
-        }
-        .progress-bar {
-            height: 100%;
-            background-color: #238636;
-            width: 0%;
-            transition: width 0.3s;
+        .math {
+            background-color: #1c2128;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
-    <h1>Шифрование текста с PBKDF2</h1>
+    <h1>Шифрование методом алгебры Клиффорда</h1>
 
     <div class="container">
         <h2>Параметры шифрования</h2>
@@ -106,7 +99,7 @@
         </div>
         <div class="input-group">
             <label for="salt">Соль (hex):</label>
-            <input type="text" id="salt" placeholder="Соль для PBKDF2" value="a1b2c3d4e5f6">
+            <input type="text" id="salt" placeholder="Соль для PBKDF2" value="a1b2c3d4">
         </div>
         <div class="input-group">
             <label for="iterations">Итерации PBKDF2:</label>
@@ -117,12 +110,9 @@
     <div class="container">
         <h2>Исходный текст</h2>
         <div class="input-group">
-            <textarea id="plaintext" rows="4" placeholder="Введите текст для шифрования">Привет мир! Это тест шифрования с PBKDF2.</textarea>
+            <textarea id="plaintext" rows="4" placeholder="Введите текст для шифрования">Привет мир! Тестируем шифрование методом Клиффорда.</textarea>
         </div>
         <button onclick="encryptText()">Зашифровать текст</button>
-        <div id="progress" class="progress" style="display: none;">
-            <div id="progressBar" class="progress-bar"></div>
-        </div>
         <div class="output" id="encryptedOutput">Ожидание шифрования...</div>
         
         <div class="stats">
@@ -158,20 +148,29 @@
         </div>
     </div>
 
+    <div class="container">
+        <h2>Математическая основа</h2>
+        <div class="math">
+            Алгебра Клиффорда Cl(8, ℤₚ) где p = 251 (простое)<br>
+            Шифрование: c = u * m * u⁻¹ (многоуровневое)<br>
+            Дешифрование: m = u⁻¹ * c * u<br>
+            Ключи генерируются через PBKDF2-SHA256
+        </div>
+    </div>
+
     <script>
-        class CliffordTextCipher {
+        class CliffordAlgebraCipher {
             constructor() {
-                this.prime = 65521n; // 16-битное простое число
-                this.dimension = 8;   // Размерность 8
-                this.levels = 9;      // Количество уровней
-                this.keyLength = 32;  // Длина ключа в байтах
+                this.prime = 251n; // Простое число для модульной арифметики
+                this.dimension = 8; // Размерность алгебры
+                this.levels = 3;   // Количество уровней шифрования
+                this.keyLength = 32; // Длина ключа PBKDF2
             }
 
-            // Генерация ключей с помощью PBKDF2
-            async generateKeysWithPBKDF2(password, salt, iterations) {
+            // Генерация ключей с PBKDF2
+            async generateKeys(password, salt, iterations) {
                 const encoder = new TextEncoder();
                 
-                // Импорт пароля как ключа
                 const keyMaterial = await crypto.subtle.importKey(
                     'raw',
                     encoder.encode(password),
@@ -180,7 +179,6 @@
                     ['deriveBits']
                 );
                 
-                // Генерация ключевого материала с помощью PBKDF2
                 const derivedKey = await crypto.subtle.deriveBits(
                     {
                         name: 'PBKDF2',
@@ -195,7 +193,6 @@
                 return new Uint8Array(derivedKey);
             }
 
-            // Преобразование hex в bytes
             hexToBytes(hex) {
                 const bytes = new Uint8Array(hex.length / 2);
                 for (let i = 0; i < bytes.length; i++) {
@@ -204,25 +201,21 @@
                 return bytes;
             }
 
-            // Создание ключевых элементов из PBKDF2 материала
-            createKeysFromPBKDF2(keyMaterial) {
+            // Создание ключевых элементов для алгебры Клиффорда
+            createCliffordKeys(keyMaterial) {
                 const keys = [];
                 
                 for (let level = 0; level < this.levels; level++) {
                     const key = new Map();
+                    const offset = level * 4 % keyMaterial.length;
                     
-                    // Используем разные части ключевого материала для каждого уровня
-                    const offset = (level * 3) % (keyMaterial.length - 4);
+                    // Базовые элементы алгебры
+                    key.set(0, BigInt(keyMaterial[offset] + 1) % this.prime); // Скаляр
                     
-                    // Скалярная часть
-                    key.set(0, BigInt(keyMaterial[offset] + 1));
-                    
-                    // Векторные части (4 компонента)
-                    for (let i = 0; i < 4; i++) {
-                        const byteValue = keyMaterial[offset + i + 1];
-                        if (byteValue > 0) {
-                            key.set(1 << i, BigInt(byteValue + 1));
-                        }
+                    // Векторные элементы e1-e8
+                    for (let i = 0; i < 8; i++) {
+                        const idx = (offset + i + 1) % keyMaterial.length;
+                        key.set(1 << i, BigInt(keyMaterial[idx] + 1) % this.prime);
                     }
                     
                     keys.push(key);
@@ -231,39 +224,38 @@
                 return keys;
             }
 
-            // Преобразование байта в элемент алгебры
-            byteToAlgebraElement(byte) {
+            // Преобразование байта в элемент алгебры Клиффорда
+            byteToCliffordElement(byte) {
                 const element = new Map();
                 
-                // Скалярная часть - младшие 4 бита
-                element.set(0, BigInt(byte & 0x0F) + 1n);
-                
-                // Векторная часть - старшие 4 бита
-                const vectorPart = (byte >> 4) & 0x0F;
-                if (vectorPart > 0) {
-                    element.set(1 << (vectorPart - 1), 1n);
+                // Используем биты байта для создания элемента
+                for (let i = 0; i < 8; i++) {
+                    if (byte & (1 << i)) {
+                        element.set(1 << i, 1n);
+                    }
                 }
+                
+                // Добавляем скалярную часть
+                element.set(0, BigInt(byte % Number(this.prime)) + 1n);
                 
                 return element;
             }
 
-            // Преобразование элемента алгебры в байт
-            algebraElementToByte(element) {
-                let scalar = Number(element.get(0) || 1n) - 1;
-                let vector = 0;
+            // Преобразование элемента Клиффорда обратно в байт
+            cliffordElementToByte(element) {
+                let result = 0;
                 
-                // Поиск векторной части
-                for (const [key, value] of element) {
-                    if (key !== 0 && value !== 0n) {
-                        vector = Math.log2(Number(key)) + 1;
-                        break;
+                // Восстанавливаем биты из векторных частей
+                for (let i = 0; i < 8; i++) {
+                    if (element.has(1 << i) && element.get(1 << i) !== 0n) {
+                        result |= (1 << i);
                     }
                 }
                 
-                return (vector << 4) | (scalar & 0x0F);
+                return result;
             }
 
-            // Умножение элементов алгебры
+            // Умножение в алгебре Клиффорда
             multiply(a, b) {
                 const result = new Map();
                 
@@ -275,79 +267,86 @@
                         let productVal = (aVal * bVal) % this.prime;
                         
                         // Учет антикоммутативности
-                        const sign = this.calculateSign(aKey, bKey);
+                        const sign = this.calculateCliffordSign(aKey, bKey);
                         productVal = (productVal * sign) % this.prime;
                         
-                        if (productVal < 0n) {
-                            productVal += this.prime;
-                        }
+                        if (productVal < 0n) productVal += this.prime;
                         
-                        if (productVal !== 0n) {
-                            const current = result.get(productKey) || 0n;
-                            result.set(productKey, (current + productVal) % this.prime);
-                        }
+                        const current = result.get(productKey) || 0n;
+                        result.set(productKey, (current + productVal) % this.prime);
                     }
                 }
                 
                 return result;
             }
 
-            // Вычисление знака произведения
-            calculateSign(a, b) {
+            // Вычисление знака в алгебре Клиффорда
+            calculateCliffordSign(a, b) {
                 if (a === 0 || b === 0) return 1n;
                 
                 let sign = 1n;
-                const aBits = a.toString(2).padStart(this.dimension, '0').split('').reverse();
-                const bBits = b.toString(2).padStart(this.dimension, '0').split('').reverse();
+                let aTemp = a;
+                let bTemp = b;
                 
-                for (let i = 0; i < this.dimension; i++) {
-                    if (aBits[i] === '1') {
-                        for (let j = i + 1; j < this.dimension; j++) {
-                            if (bBits[j] === '1') {
-                                sign = -sign;
-                            }
+                // Подсчет числа перестановок
+                while (aTemp && bTemp) {
+                    if (aTemp & 1) {
+                        const higherBits = bTemp >> 1;
+                        if (higherBits & 1) {
+                            sign = -sign;
                         }
                     }
+                    aTemp >>= 1;
+                    bTemp >>= 1;
                 }
                 
-                return sign < 0n ? this.prime + sign : sign;
+                return sign;
             }
 
-            // Шифрование текста
+            // Нахождение обратного элемента
+            findInverse(element) {
+                const inverse = new Map();
+                for (const [key, value] of element) {
+                    if (value !== 0n) {
+                        // Находим обратное по модулю
+                        let inv = 1n;
+                        let exp = this.prime - 2n;
+                        let base = value;
+                        
+                        while (exp > 0) {
+                            if (exp % 2n === 1n) {
+                                inv = (inv * base) % this.prime;
+                            }
+                            base = (base * base) % this.prime;
+                            exp >>= 1n;
+                        }
+                        
+                        inverse.set(key, inv);
+                    }
+                }
+                return inverse;
+            }
+
+            // Шифрование текста методом Клиффорда
             async encryptText(text, password, salt, iterations) {
                 const startTime = performance.now();
                 const textBytes = new TextEncoder().encode(text);
-                const encryptedBytes = new Uint8Array(textBytes.length * 2);
+                const encryptedBytes = new Uint8Array(textBytes.length);
                 
-                // Генерация ключей с PBKDF2
-                const keyMaterial = await this.generateKeysWithPBKDF2(password, salt, iterations);
-                const keys = this.createKeysFromPBKDF2(keyMaterial);
+                // Генерация ключей
+                const keyMaterial = await this.generateKeys(password, salt, iterations);
+                const keys = this.createCliffordKeys(keyMaterial);
+                const inverses = keys.map(key => this.findInverse(key));
                 
                 for (let i = 0; i < textBytes.length; i++) {
-                    const byte = textBytes[i];
+                    let element = this.byteToCliffordElement(textBytes[i]);
                     
-                    // Преобразование байта в элемент
-                    let element = this.byteToAlgebraElement(byte);
-                    
-                    // Многоуровневое шифрование
+                    // Многоуровневое шифрование: c = u3 * u2 * u1 * m * u1⁻¹ * u2⁻¹ * u3⁻¹
                     for (let level = 0; level < this.levels; level++) {
-                        const key = keys[level];
-                        element = this.multiply(key, this.multiply(element, key));
+                        element = this.multiply(keys[level], this.multiply(element, inverses[level]));
                     }
                     
-                    // Сохранение результата (2 байта)
-                    const scalar = Number(element.get(0) || 1n) % 256;
-                    let vector = 0;
-                    
-                    for (const [key, value] of element) {
-                        if (key !== 0 && value !== 0n) {
-                            vector = Math.log2(Number(key)) + 1;
-                            break;
-                        }
-                    }
-                    
-                    encryptedBytes[i * 2] = scalar;
-                    encryptedBytes[i * 2 + 1] = vector;
+                    encryptedBytes[i] = this.cliffordElementToByte(element);
                 }
                 
                 const endTime = performance.now();
@@ -365,31 +364,22 @@
             // Дешифрование текста
             async decryptText(ciphertext, password, salt, iterations) {
                 const startTime = performance.now();
-                const decryptedBytes = new Uint8Array(ciphertext.length / 2);
+                const decryptedBytes = new Uint8Array(ciphertext.length);
                 
-                // Генерация ключей с PBKDF2 (таких же как при шифровании)
-                const keyMaterial = await this.generateKeysWithPBKDF2(password, salt, iterations);
-                const keys = this.createKeysFromPBKDF2(keyMaterial);
+                // Генерация ключей (таких же как при шифровании)
+                const keyMaterial = await this.generateKeys(password, salt, iterations);
+                const keys = this.createCliffordKeys(keyMaterial);
+                const inverses = keys.map(key => this.findInverse(key));
                 
-                for (let i = 0; i < decryptedBytes.length; i++) {
-                    // Восстановление элемента из двух байт
-                    const scalar = ciphertext[i * 2];
-                    const vector = ciphertext[i * 2 + 1];
+                for (let i = 0; i < ciphertext.length; i++) {
+                    let element = this.byteToCliffordElement(ciphertext[i]);
                     
-                    let element = new Map();
-                    element.set(0, BigInt(scalar) + 1n);
-                    if (vector > 0) {
-                        element.set(1 << (vector - 1), 1n);
-                    }
-                    
-                    // Многоуровневое дешифрование (в обратном порядке)
+                    // Многоуровневое дешифрование в обратном порядке
                     for (let level = this.levels - 1; level >= 0; level--) {
-                        const key = keys[level];
-                        element = this.multiply(key, this.multiply(element, key));
+                        element = this.multiply(inverses[level], this.multiply(element, keys[level]));
                     }
                     
-                    // Преобразование элемента обратно в байт
-                    decryptedBytes[i] = this.algebraElementToByte(element);
+                    decryptedBytes[i] = this.cliffordElementToByte(element);
                 }
                 
                 const endTime = performance.now();
@@ -404,17 +394,8 @@
         }
 
         // Глобальные переменные
-        const cipher = new CliffordTextCipher();
+        const cipher = new CliffordAlgebraCipher();
         let currentCiphertext = null;
-
-        // Обновление прогресса
-        function updateProgress(percentage) {
-            const progress = document.getElementById('progress');
-            const progressBar = document.getElementById('progressBar');
-            
-            progress.style.display = 'block';
-            progressBar.style.width = percentage + '%';
-        }
 
         // Шифрование текста
         async function encryptText() {
@@ -429,29 +410,23 @@
             }
 
             try {
-                updateProgress(10);
                 const result = await cipher.encryptText(plaintext, password, salt, iterations);
                 currentCiphertext = result.ciphertext;
                 
-                updateProgress(100);
+                // Отображение зашифрованного текста (как raw bytes)
+                const hexArray = Array.from(result.ciphertext).map(b => 
+                    b.toString(16).padStart(2, '0')
+                );
                 
-                // Отображение результатов
                 document.getElementById('encryptedOutput').textContent = 
-                    'Шифртекст (hex):\n' + Array.from(result.ciphertext)
-                        .map(b => b.toString(16).padStart(2, '0'))
-                        .join(' ');
+                    'Шифртекст (hex представление байтов):\n' + hexArray.join(' ');
                 
                 document.getElementById('originalSize').textContent = result.performance.originalSize;
                 document.getElementById('encryptedSize').textContent = result.performance.encryptedSize;
                 document.getElementById('encryptTime').textContent = result.performance.time.toFixed(2);
                 
-                setTimeout(() => {
-                    document.getElementById('progress').style.display = 'none';
-                }, 1000);
-                
             } catch (error) {
                 document.getElementById('encryptedOutput').textContent = 'Ошибка: ' + error.message;
-                document.getElementById('progress').style.display = 'none';
             }
         }
 
@@ -467,23 +442,15 @@
             const iterations = parseInt(document.getElementById('iterations').value);
             
             try {
-                updateProgress(50);
                 const result = await cipher.decryptText(currentCiphertext, password, salt, iterations);
-                
-                updateProgress(100);
                 
                 document.getElementById('decryptedOutput').textContent = 
                     'Дешифрованный текст:\n' + result.plaintext;
                 
                 document.getElementById('decryptTime').textContent = result.performance.time.toFixed(2);
                 
-                setTimeout(() => {
-                    document.getElementById('progress').style.display = 'none';
-                }, 1000);
-                
             } catch (error) {
                 document.getElementById('decryptedOutput').textContent = 'Ошибка: ' + error.message;
-                document.getElementById('progress').style.display = 'none';
             }
         }
     </script>
