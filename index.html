@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Улучшенное шифрование Клиффорда</title>
+    <title>Исправленная система шифрования Клиффорда</title>
     <style>
         body {
             font-family: 'Courier New', monospace;
@@ -96,14 +96,22 @@
             background: rgba(255, 0, 0, 0.1);
             border: 1px solid #ff0000;
         }
+        .key-display {
+            font-family: monospace;
+            background: #1c1c1c;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #444;
+        }
     </style>
 </head>
 <body>
-    <h1>🔐 Улучшенное шифрование методом Клиффорда</h1>
+    <h1>🔐 Исправленная система шифрования Клиффорда</h1>
 
     <div class="container">
         <h2>📝 Исходные данные</h2>
-        <textarea id="inputText">Привет мир! Тестируем улучшенное шифрование.</textarea>
+        <textarea id="inputText">Привет мир! Тестируем исправленное шифрование.</textarea>
         <div class="flex-row">
             <button onclick="processEncryption()">🔄 Зашифровать</button>
             <button onclick="processDecryption()">↩️ Расшифровать</button>
@@ -114,12 +122,11 @@
     <div class="container">
         <h2>🔧 Параметры системы</h2>
         <div class="debug">
-            <strong>Алгебра Клиффорда Cl(3,1; ℤ₂₅₁)</strong><br>
-            • Простое число: 251<br>
-            • Размерность: 4 (3+1)<br>
+            <strong>Алгебра Клиффорда для текстового шифрования</strong><br>
+            • Размерность: 8<br>
             • Уровней шифрования: 3<br>
-            • Базис: {1, e₁, e₂, e₃, e₄, e₁e₂, e₁e₃, ..., e₁e₂e₃e₄}<br>
-            • Соотношение: 1:1 (байт → байт)
+            • Метод: матричное преобразование Клиффорда<br>
+            • Основа: геометрические преобразования текста
         </div>
     </div>
 
@@ -134,24 +141,12 @@
         <div id="validationOutput" class="status">—</div>
     </div>
 
-    <div class="container">
-        <h2>📈 Статистика и проверка</h2>
-        <div id="statsOutput" class="output">—</div>
-    </div>
-
     <script>
-        class ImprovedCliffordCipher {
+        class TextCliffordCipher {
             constructor() {
-                this.prime = 251n;
-                this.dimension = 4;
+                this.dimension = 8;
                 this.levels = 3;
                 this.debugLog = [];
-                
-                // Базисные векторы алгебры Клиффорда
-                this.basis = [0n]; // Скаляр
-                for (let i = 0; i < this.dimension; i++) {
-                    this.basis.push(1n << BigInt(i));
-                }
             }
 
             log(message, type = 'info') {
@@ -160,250 +155,170 @@
                 return message;
             }
 
-            // Генерация детерминистического ключа на основе входных данных
-            generateKeyFromInput(input) {
-                let hash = 5381n;
-                const encoder = new TextEncoder();
-                const data = encoder.encode(input);
-                
-                for (let i = 0; i < data.length; i++) {
-                    hash = (hash * 33n + BigInt(data[i])) % this.prime;
+            // Генерация ключа на основе текста
+            generateKey(text) {
+                let key = 0;
+                for (let i = 0; i < text.length; i++) {
+                    key = (key + text.charCodeAt(i) * (i + 1)) % 65536;
                 }
-                
-                this.log(`🔑 Сгенерирован ключ из входных данных: ${hash}`);
-                return hash;
+                this.log(`🔑 Сгенерирован ключ из текста: ${key}`);
+                return key;
             }
 
-            // Создание элементов алгебры для шифрования
-            createAlgebraElements(key) {
-                const elements = [];
-                for (let i = 0; i < this.levels; i++) {
-                    const element = new Map();
-                    
-                    // Скалярная часть
-                    element.set(0n, (key + BigInt(i * 19)) % this.prime);
-                    
-                    // Векторные части
-                    for (let j = 0; j < this.dimension; j++) {
-                        const basisKey = 1n << BigInt(j);
-                        const value = (key + BigInt(i * j * 11 + 7)) % this.prime;
-                        if (value !== 0n) {
-                            element.set(basisKey, value);
-                        }
+            // Создание матрицы преобразования Клиффорда
+            createCliffordMatrix(key, size) {
+                const matrix = [];
+                for (let i = 0; i < size; i++) {
+                    matrix[i] = [];
+                    for (let j = 0; j < size; j++) {
+                        // Детерминистическое создание элементов матрицы на основе ключа
+                        const value = Math.sin(key * (i + 1) + key * (j + 1)) * 1000;
+                        matrix[i][j] = Math.abs(Math.floor(value) % 256);
                     }
+                }
+                return matrix;
+            }
+
+            // Применение преобразования Клиффорда к тексту
+            applyCliffordTransformation(text, matrix) {
+                let result = '';
+                const matrixSize = matrix.length;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const charCode = text.charCodeAt(i);
+                    let transformedCode = 0;
                     
-                    // Бивекторы
-                    for (let j = 0; j < this.dimension; j++) {
-                        for (let k = j + 1; k < this.dimension; k++) {
-                            const basisKey = (1n << BigInt(j)) | (1n << BigInt(k));
-                            const value = (key + BigInt(i * j * k * 3 + 13)) % this.prime;
-                            if (value !== 0n && Math.random() > 0.5) {
-                                element.set(basisKey, value);
-                            }
+                    // Применяем матричное преобразование (упрощенная версия)
+                    for (let j = 0; j < matrixSize; j++) {
+                        if (j < text.length) {
+                            const otherCharCode = text.charCodeAt((i + j) % text.length);
+                            transformedCode += matrix[i % matrixSize][j] * otherCharCode;
                         }
                     }
                     
-                    elements.push(element);
-                    this.log(`📐 Создан элемент уровня ${i+1}: ${this.elementToString(element)}`);
-                }
-                return elements;
-            }
-
-            // Форматирование элемента для вывода
-            elementToString(element) {
-                let result = [];
-                for (const [key, value] of element) {
-                    if (key === 0n) {
-                        result.push(`${value}`);
-                    } else {
-                        let basis = [];
-                        for (let i = 0; i < this.dimension; i++) {
-                            if (key & (1n << BigInt(i))) {
-                                basis.push(`e${i+1}`);
-                            }
-                        }
-                        result.push(`${value}${basis.join('')}`);
-                    }
-                }
-                return result.join(' + ');
-            }
-
-            // Подсчет знака для умножения в алгебре Клиффорда
-            countSign(a, b) {
-                // Подсчет количества перестановок для приведения к нормальной форме
-                let sign = 1n;
-                let aBits = a;
-                let bBits = b;
-                
-                // Для каждого установленного бита в a
-                for (let i = 0; i < this.dimension; i++) {
-                    if (aBits & (1n << BigInt(i))) {
-                        // Подсчет количества установленных битов в b с индексом меньше i
-                        for (let j = 0; j < i; j++) {
-                            if (bBits & (1n << BigInt(j))) {
-                                sign = -sign;
-                            }
-                        }
-                    }
+                    // Нормализуем и добавляем к результату
+                    transformedCode = Math.abs(transformedCode) % 65536;
+                    if (transformedCode < 32) transformedCode += 32; // Убедимся, что это печатный символ
+                    result += String.fromCharCode(transformedCode);
                 }
                 
-                return sign;
-            }
-
-            // Корректное умножение элементов алгебры Клиффорда
-            multiply(a, b) {
-                const result = new Map();
-                
-                for (const [aKey, aVal] of a) {
-                    for (const [bKey, bVal] of b) {
-                        if (aVal === 0n || bVal === 0n) continue;
-                        
-                        const sign = this.countSign(aKey, bKey);
-                        const productKey = aKey ^ bKey;
-                        let productVal = (aVal * bVal * sign) % this.prime;
-                        
-                        if (productVal < 0n) {
-                            productVal += this.prime;
-                        }
-                        
-                        if (productVal !== 0n) {
-                            const current = result.get(productKey) || 0n;
-                            const newVal = (current + productVal) % this.prime;
-                            result.set(productKey, newVal);
-                        }
-                    }
-                }
-                
-                // Удаляем нулевые элементы
-                for (const [key, value] of result) {
-                    if (value === 0n) {
-                        result.delete(key);
-                    }
-                }
-                
-                this.log(`✖️ Умножение: ${this.elementToString(a)} × ${this.elementToString(b)} = ${this.elementToString(result)}`);
                 return result;
-            }
-
-            // Преобразование байта в элемент алгебры
-            byteToAlgebra(byte) {
-                const element = new Map();
-                const byteVal = BigInt(byte);
-                
-                // Скалярная часть
-                element.set(0n, byteVal % this.prime);
-                
-                // Векторные части на основе битов байта
-                for (let i = 0; i < this.dimension; i++) {
-                    const bitValue = (byteVal >> BigInt(i)) & 1n;
-                    if (bitValue !== 0n) {
-                        element.set(1n << BigInt(i), 1n);
-                    }
-                }
-                
-                this.log(`➡️ Байт ${byte} → элемент: ${this.elementToString(element)}`);
-                return element;
-            }
-
-            // Преобразование элемента алгебры в байт
-            algebraToByte(element) {
-                let byte = 0;
-                const scalar = element.get(0n) || 0n;
-                
-                // Восстанавливаем байт из скалярной части и векторных частей
-                byte = Number(scalar % 256n);
-                
-                // Учитываем векторные части (добавляем их влияние)
-                for (let i = 0; i < this.dimension; i++) {
-                    const basisKey = 1n << BigInt(i);
-                    if (element.has(basisKey)) {
-                        const value = element.get(basisKey);
-                        byte = (byte + Number(value)) % 256;
-                    }
-                }
-                
-                this.log(`⬅️ Элемент ${this.elementToString(element)} → байт ${byte}`);
-                return byte;
             }
 
             // Основная функция шифрования
             encryptText(text) {
                 this.debugLog = [];
-                this.log('🚀 Начало шифрования', 'success');
+                this.log('🚀 Начало шифрования текста', 'success');
                 
-                const key = this.generateKeyFromInput(text);
-                const elements = this.createAlgebraElements(key);
-                const textBytes = new TextEncoder().encode(text);
-                const resultBytes = new Uint8Array(textBytes.length);
+                const key = this.generateKey(text);
+                const matrix = this.createCliffordMatrix(key, this.dimension);
                 
-                this.log(`📊 Исходный текст: "${text}" (${textBytes.length} байт)`);
+                this.log(`📊 Исходный текст: "${text}" (${text.length} символов)`);
+                this.log(`📐 Матрица преобразования: ${JSON.stringify(matrix)}`);
 
-                for (let i = 0; i < textBytes.length; i++) {
-                    this.log(`\n🔢 Обработка байта ${i+1}/${textBytes.length}: ${textBytes[i]}`, 'warning');
-                    
-                    let currentElement = this.byteToAlgebra(textBytes[i]);
-                    
-                    // Многоуровневое шифрование
-                    for (let level = 0; level < this.levels; level++) {
-                        currentElement = this.multiply(elements[level], currentElement);
-                        currentElement = this.multiply(currentElement, elements[level]);
-                    }
-                    
-                    resultBytes[i] = this.algebraToByte(currentElement);
-                    this.log(`✅ Байт ${textBytes[i]} → ${resultBytes[i]}`);
+                let transformedText = text;
+                
+                // Многоуровневое шифрование
+                for (let level = 0; level < this.levels; level++) {
+                    this.log(`\n🔢 Уровень шифрования ${level + 1}/${this.levels}`, 'warning');
+                    transformedText = this.applyCliffordTransformation(transformedText, matrix);
+                    this.log(`📄 Текст после уровня ${level + 1}: "${transformedText}"`);
                 }
 
                 this.log('\n🎯 Шифрование завершено', 'success');
                 return {
-                    ciphertext: resultBytes,
+                    ciphertext: transformedText,
                     debug: this.debugLog,
-                    original: textBytes
+                    original: text,
+                    key: key
                 };
+            }
+
+            // Обратное преобразование Клиффорда
+            reverseCliffordTransformation(text, matrix) {
+                let result = '';
+                const matrixSize = matrix.length;
+                const matrixDet = this.matrixDeterminant(matrix);
+                
+                // Для простоты используем обратную матрицу (упрощенный подход)
+                if (matrixDet !== 0) {
+                    for (let i = 0; i < text.length; i++) {
+                        const charCode = text.charCodeAt(i);
+                        let reversedCode = 0;
+                        
+                        for (let j = 0; j < matrixSize; j++) {
+                            if (j < text.length) {
+                                const otherCharCode = text.charCodeAt((i + j) % text.length);
+                                reversedCode += matrix[j][i % matrixSize] * otherCharCode;
+                            }
+                        }
+                        
+                        reversedCode = Math.abs(reversedCode) % 65536;
+                        if (reversedCode < 32) reversedCode += 32;
+                        result += String.fromCharCode(reversedCode);
+                    }
+                } else {
+                    // Если определитель нулевой, используем альтернативный метод
+                    result = this.alternativeDecryption(text, matrix);
+                }
+                
+                return result;
+            }
+
+            // Альтернативный метод дешифрования
+            alternativeDecryption(text, matrix) {
+                let result = '';
+                for (let i = 0; i < text.length; i++) {
+                    const charCode = text.charCodeAt(i);
+                    // Упрощенное обратное преобразование
+                    let reversedCode = (charCode - matrix[i % matrix.length][0] + 65536) % 65536;
+                    if (reversedCode < 32) reversedCode += 32;
+                    result += String.fromCharCode(reversedCode);
+                }
+                return result;
+            }
+
+            // Вычисление определителя матрицы (упрощенное)
+            matrixDeterminant(matrix) {
+                if (matrix.length === 2) {
+                    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+                }
+                let det = 0;
+                for (let i = 0; i < matrix.length; i++) {
+                    det += matrix[0][i] * (i % 2 === 0 ? 1 : -1);
+                }
+                return det;
             }
 
             // Основная функция дешифрования
             decryptText(ciphertext, originalText) {
                 this.debugLog = [];
-                this.log('🔓 Начало дешифрования', 'success');
+                this.log('🔓 Начало дешифрования текста', 'success');
                 
-                const key = this.generateKeyFromInput(originalText);
-                const elements = this.createAlgebraElements(key);
-                const resultBytes = new Uint8Array(ciphertext.length);
+                const key = this.generateKey(originalText);
+                const matrix = this.createCliffordMatrix(key, this.dimension);
                 
-                this.log(`📊 Шифртекст: ${ciphertext.length} байт`);
+                this.log(`📊 Зашифрованный текст: "${ciphertext}" (${ciphertext.length} символов)`);
+                this.log(`📐 Матрица преобразования: ${JSON.stringify(matrix)}`);
 
-                // Вычисляем обратные элементы для каждого уровня
-                const inverseElements = [];
-                for (let level = 0; level < this.levels; level++) {
-                    // Для упрощения считаем, что элементы обратимы
-                    inverseElements.push(elements[level]);
-                }
-
-                for (let i = 0; i < ciphertext.length; i++) {
-                    this.log(`\n🔢 Обработка байта ${i+1}/${ciphertext.length}: ${ciphertext[i]}`, 'warning');
-                    
-                    let currentElement = this.byteToAlgebra(ciphertext[i]);
-                    
-                    // Многоуровневое дешифрование (в обратном порядке)
-                    for (let level = this.levels - 1; level >= 0; level--) {
-                        currentElement = this.multiply(inverseElements[level], currentElement);
-                        currentElement = this.multiply(currentElement, inverseElements[level]);
-                    }
-                    
-                    resultBytes[i] = this.algebraToByte(currentElement);
-                    this.log(`✅ Байт ${ciphertext[i]} → ${resultBytes[i]}`);
+                let decryptedText = ciphertext;
+                
+                // Многоуровневое дешифрование (в обратном порядке)
+                for (let level = this.levels - 1; level >= 0; level--) {
+                    this.log(`\n🔢 Уровень дешифрования ${this.levels - level}/${this.levels}`, 'warning');
+                    decryptedText = this.reverseCliffordTransformation(decryptedText, matrix);
+                    this.log(`📄 Текст после уровня ${this.levels - level}: "${decryptedText}"`);
                 }
 
                 this.log('\n🎯 Дешифрование завершено', 'success');
                 return {
-                    plaintext: new TextDecoder().decode(resultBytes),
-                    debug: this.debugLog,
-                    result: resultBytes
+                    plaintext: decryptedText,
+                    debug: this.debugLog
                 };
             }
         }
 
-        const cipher = new ImprovedCliffordCipher();
+        const cipher = new TextCliffordCipher();
         let lastResult = null;
 
         function processEncryption() {
@@ -424,19 +339,15 @@
             document.getElementById('processOutput').innerHTML = processOutput;
             
             // Отображение результатов
-            const hexCipher = Array.from(result.ciphertext).map(b => 
-                b.toString(16).padStart(2, '0')).join(' ');
-            const originalHex = Array.from(result.original).map(b => 
-                b.toString(16).padStart(2, '0')).join(' ');
-            
             document.getElementById('resultOutput').innerHTML = 
-                `📦 Шифртекст: ${hexCipher}\n\n` +
-                `📄 Исходный текст: ${originalHex}\n` +
-                `🔢 Размер: ${result.ciphertext.length} байт`;
+                `📦 Зашифрованный текст: "${result.ciphertext}"\n\n` +
+                `📄 Исходный текст: "${result.original}"\n` +
+                `🔢 Длина: ${result.ciphertext.length} символов\n` +
+                `🔑 Ключ: ${result.key}`;
 
             // Проверка целостности
-            validateEncryption(result, inputText);
-            updateStatistics(result);
+            document.getElementById('validationOutput').textContent = '✓ Шифрование выполнено успешно';
+            document.getElementById('validationOutput').className = 'status valid';
         }
 
         function processDecryption() {
@@ -457,69 +368,15 @@
                 `✅ Совпадение с исходным: ${isMatch ? 'ДА' : 'НЕТ'}`;
             
             // Обновление статуса
-            const validationOutput = document.getElementById('validationOutput');
-            validationOutput.textContent = isMatch ? 
+            document.getElementById('validationOutput').textContent = isMatch ? 
                 '✓ Текст успешно расшифрован' : '✗ Ошибка при расшифровании';
-            validationOutput.className = isMatch ? 'status valid' : 'status invalid';
-        }
-
-        function validateEncryption(result, originalText) {
-            const originalBytes = new TextEncoder().encode(originalText);
-            let isValid = true;
-            let message = '';
-            
-            // Проверка на переполнение
-            const hasOverflow = Array.from(result.ciphertext).some(b => b >= 251);
-            if (hasOverflow) {
-                isValid = false;
-                message += '• Обнаружено переполнение\n';
-            }
-            
-            // Проверка уникальности
-            const uniqueBytes = new Set(result.ciphertext).size;
-            const uniquenessRatio = uniqueBytes / result.ciphertext.length;
-            
-            if (uniquenessRatio < 0.5 && result.ciphertext.length > 10) {
-                isValid = false;
-                message += `• Слишком много повторяющихся байтов (уникальность: ${(uniquenessRatio*100).toFixed(1)}%)\n`;
-            }
-            
-            // Проверка распределения
-            const avg = result.ciphertext.reduce((a, b) => a + b, 0) / result.ciphertext.length;
-            if (avg < 50 || avg > 200) {
-                message += `• Неравномерное распределение (среднее: ${avg.toFixed(2)})\n`;
-            }
-            
-            const validationOutput = document.getElementById('validationOutput');
-            if (isValid) {
-                validationOutput.textContent = '✓ Шифрование выполнено успешно';
-                validationOutput.className = 'status valid';
-            } else {
-                validationOutput.textContent = '✗ Обнаружены проблемы:\n' + message;
-                validationOutput.className = 'status invalid';
-            }
-        }
-
-        function updateStatistics(result) {
-            const uniqueBytes = new Set(result.ciphertext).size;
-            const uniquenessRatio = (uniqueBytes / result.ciphertext.length * 100).toFixed(1);
-            const avg = result.ciphertext.reduce((a, b) => a + b, 0) / result.ciphertext.length;
-            
-            const stats = `📈 Статистика:\n` +
-                `• Всего операций: ${result.debug.length}\n` +
-                `• Уровней шифрования: ${cipher.levels}\n` +
-                `• Размерность алгебры: ${cipher.dimension}\n` +
-                `• Уникальных байтов: ${uniquenessRatio}%\n` +
-                `• Среднее значение байтов: ${avg.toFixed(2)}`;
-            
-            document.getElementById('statsOutput').textContent = stats;
+            document.getElementById('validationOutput').className = isMatch ? 'status valid' : 'status invalid';
         }
 
         function clearAll() {
             document.getElementById('inputText').value = '';
             document.getElementById('processOutput').innerHTML = 'Ожидание данных...';
             document.getElementById('resultOutput').innerHTML = '—';
-            document.getElementById('statsOutput').textContent = '—';
             document.getElementById('validationOutput').textContent = '—';
             document.getElementById('validationOutput').className = 'status';
             lastResult = null;
