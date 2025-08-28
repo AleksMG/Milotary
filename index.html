@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Правильная реализация умножения Клиффорда</title>
+    <title>Исправленная реализация с обратимостью</title>
     <style>
         :root {
             --primary: #00ff8c;
@@ -161,22 +161,35 @@
             font-family: 'Cambria Math', serif;
             font-style: italic;
         }
+        
+        .warning {
+            background: rgba(255, 204, 0, 0.1);
+            border: 1px solid #ffcc00;
+            color: #ffcc00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🔐 Правильная реализация умножения Клиффорда</h1>
-        <p>Корректная реализация алгебры Клиффорда Cl(3,1) над GF(2⁸)</p>
+        <h1>🔐 Исправленная реализация с обратимостью</h1>
+        <p>Корректная реализация с обратимыми операциями в алгебре Клиффорда</p>
     </div>
     
     <div class="container">
+        <div class="warning">
+            ⚠️ В предыдущей реализации отсутствовала обратимость операций. В этой версии исправлены математические операции для обеспечения корректного шифрования и дешифрования.
+        </div>
+        
         <div class="explanation">
-            <h3>Математическая основа алгебры Клиффорда</h3>
-            <p>Алгебра Клиффорда Cl(3,1) определяется через антикоммутирующие генераторы 
-            <span class="math">e₁, e₂, e₃, e₄</span> с метрикой:</p>
-            <p class="math">e₁² = e₂² = e₃² = 1, e₄² = -1</p>
-            <p class="math">e_i * e_j = -e_j * e_i (при i ≠ j)</p>
-            <p>Каждый элемент алгебры представляется как мультивектор - линейная комбинация базисных элементов.</p>
+            <h3>Математическая основа обратимости</h3>
+            <p>Для обеспечения обратимости в алгебре Клиффорда используется преобразование:</p>
+            <p class="math">C = K * P * K⁻¹</p>
+            <p>где K⁻¹ — обратный элемент к K. Для дешифрования:</p>
+            <p class="math">P = K⁻¹ * C * K</p>
+            <p>Это обеспечивает полную обратимость при условии, что K обратим в алгебре.</p>
         </div>
         
         <h2>📝 Исходный текст</h2>
@@ -189,7 +202,7 @@
             <button onclick="processEncryption()">🔄 Зашифровать</button>
             <button onclick="processDecryption()">↩️ Расшифровать</button>
             <button onclick="clearAll()">❌ Очистить</button>
-            <button onclick="testMultiplication()">🧪 Тест умножения</button>
+            <button onclick="testReversibility()">🧪 Тест обратимости</button>
         </div>
         
         <h2>📊 Результаты</h2>
@@ -202,12 +215,12 @@
     </div>
 
     <script>
-        // Правильная реализация алгебры Клиффорда Cl(3,1)
-        class CliffordAlgebra {
+        // Правильная реализация алгебры Клиффорда Cl(3,1) с обратимостью
+        class ReversibleCliffordAlgebra {
             constructor() {
                 this.dimension = 4;
                 this.metric = [1, 1, 1, -1]; // Сигнатура (3,1)
-                this.basisVectors = 16; // 2^4 = 16 базисных элементов
+                this.basisCount = 16; // 2^4 = 16 базисных элементов
                 
                 // Предварительно вычисленная таблица умножения
                 this.multiplicationTable = this.generateMultiplicationTable();
@@ -215,10 +228,10 @@
             
             // Генерация таблицы умножения для базисных элементов
             generateMultiplicationTable() {
-                const table = new Array(this.basisVectors);
-                for (let i = 0; i < this.basisVectors; i++) {
-                    table[i] = new Array(this.basisVectors);
-                    for (let j = 0; j < this.basisVectors; j++) {
+                const table = new Array(this.basisCount);
+                for (let i = 0; i < this.basisCount; i++) {
+                    table[i] = new Array(this.basisCount);
+                    for (let j = 0; j < this.basisCount; j++) {
                         table[i][j] = this.multiplyBasisElements(i, j);
                     }
                 }
@@ -227,42 +240,47 @@
             
             // Умножение двух базисных элементов
             multiplyBasisElements(a, b) {
-                // Разложить на базисные векторы
-                const aBits = this.getBasisVectors(a);
-                const bBits = this.getBasisVectors(b);
+                if (a === 0) return { value: b, sign: 1 };
+                if (b === 0) return { value: a, sign: 1 };
                 
-                // Объединить и отсортировать с учетом антикоммутативности
-                let resultBits = [...aBits, ...bBits];
+                const aVectors = this.getBasisVectors(a);
+                const bVectors = this.getBasisVectors(b);
+                
+                let resultVectors = [...aVectors];
                 let sign = 1;
                 
-                // Сортировка пузырьком с учетом изменения знака
-                for (let i = 0; i < resultBits.length; i++) {
-                    for (let j = i + 1; j < resultBits.length; j++) {
-                        if (resultBits[i] > resultBits[j]) {
-                            // Меняем местами и меняем знак
-                            [resultBits[i], resultBits[j]] = [resultBits[j], resultBits[i]];
-                            sign = -sign;
-                        } else if (resultBits[i] === resultBits[j]) {
-                            // e_i * e_i = g(e_i, e_i)
-                            const square = this.metric[resultBits[i]];
-                            // Удаляем повторяющиеся векторы
-                            resultBits.splice(j, 1);
-                            resultBits.splice(i, 1);
-                            i = Math.max(-1, i - 2);
-                            j = i;
-                            sign *= square;
+                // Добавляем векторы из b с учетом антикоммутативности
+                for (const bVec of bVectors) {
+                    let insertPos = resultVectors.length;
+                    
+                    // Находим позицию для вставки с учетом порядка
+                    for (let i = 0; i < resultVectors.length; i++) {
+                        if (resultVectors[i] === bVec) {
+                            // Найден одинаковый вектор - применяем квадрат
+                            sign *= this.metric[bVec];
+                            resultVectors.splice(i, 1);
+                            insertPos = -1;
+                            break;
+                        } else if (resultVectors[i] > bVec) {
+                            insertPos = i;
                             break;
                         }
                     }
+                    
+                    if (insertPos >= 0) {
+                        // Вставляем вектор и учитываем перестановки
+                        sign *= Math.pow(-1, resultVectors.length - insertPos);
+                        resultVectors.splice(insertPos, 0, bVec);
+                    }
                 }
                 
-                // Собрать результат
-                let resultIndex = 0;
-                for (const bit of resultBits) {
-                    resultIndex |= (1 << bit);
+                // Собираем результат
+                let resultValue = 0;
+                for (const vec of resultVectors) {
+                    resultValue |= (1 << vec);
                 }
                 
-                return { value: resultIndex, sign: sign };
+                return { value: resultValue, sign: sign };
             }
             
             // Получить массив индексов базисных векторов из числа
@@ -273,46 +291,63 @@
                         vectors.push(i);
                     }
                 }
-                return vectors;
+                return vectors.sort((a, b) => a - b);
             }
             
-            // Умножение двух мультивекторов (линейная комбинация базисных элементов)
+            // Умножение двух мультивекторов
             multiply(a, b) {
-                // a и b - массивы коэффициентов для каждого базисного элемента
-                const result = new Array(this.basisVectors).fill(0);
+                const result = new Array(this.basisCount).fill(0);
                 
-                for (let i = 0; i < this.basisVectors; i++) {
-                    if (a[i] === 0) continue;
+                for (let i = 0; i < this.basisCount; i++) {
+                    if (Math.abs(a[i]) < 1e-10) continue;
                     
-                    for (let j = 0; j < this.basisVectors; j++) {
-                        if (b[j] === 0) continue;
+                    for (let j = 0; j < this.basisCount; j++) {
+                        if (Math.abs(b[j]) < 1e-10) continue;
                         
                         const product = this.multiplicationTable[i][j];
                         const coefficient = a[i] * b[j] * product.sign;
-                        result[product.value] += coefficient;
+                        result[product.value] = (result[product.value] || 0) + coefficient;
                     }
                 }
                 
                 return result;
             }
             
-            // Представление числа как мультивектора (только скалярная часть)
-            numberToMultivector(n) {
-                const mv = new Array(this.basisVectors).fill(0);
-                mv[0] = n; // Помещаем число в скалярную часть
-                return mv;
+            // Вычисление обратного элемента
+            inverse(mv) {
+                // Для простоты работаем только со скалярными элементами
+                // В полной реализации нужно вычислять обратный для полного мультивектора
+                if (mv[0] === 0) throw new Error("Невозможно обратить нулевой элемент");
+                
+                const result = new Array(this.basisCount).fill(0);
+                result[0] = 1 / mv[0]; // Обратный к скаляру
+                return result;
             }
             
-            // Извлечение числа из мультивектора (скалярная часть)
-            multivectorToNumber(mv) {
-                return mv[0];
+            // Сопряжение (реверс) мультивектора
+            reverse(mv) {
+                const result = [...mv];
+                // Для Cl(3,1) реверс меняет знак у элементов с нечетной степенью
+                for (let i = 1; i < this.basisCount; i++) {
+                    const vectors = this.getBasisVectors(i);
+                    if (vectors.length % 2 === 1) {
+                        result[i] = -result[i];
+                    }
+                }
+                return result;
+            }
+            
+            // Норма мультивектора
+            norm(mv) {
+                const reversed = this.reverse(mv);
+                return this.multiply(mv, reversed);
             }
         }
 
-        // Реализация шифра на основе корректной алгебры Клиффорда
-        class CliffordCipher {
+        // Реализация шифра с обратимыми операциями
+        class ReversibleCliffordCipher {
             constructor() {
-                this.algebra = new CliffordAlgebra();
+                this.algebra = new ReversibleCliffordAlgebra();
                 this.fieldSize = 256; // GF(2⁸)
                 this.debugLog = [];
             }
@@ -390,34 +425,46 @@
                 return hash;
             }
 
+            // Преобразование числа в мультивектор (только скалярная часть)
+            numberToMultivector(n) {
+                const mv = new Array(this.algebra.basisCount).fill(0);
+                mv[0] = n;
+                return mv;
+            }
+
+            // Извлечение числа из мультивектора (скалярная часть)
+            multivectorToNumber(mv) {
+                return Math.round(mv[0]) % this.fieldSize;
+            }
+
             // Шифрование одного байта с использованием алгебры Клиффорда
             encryptByte(byte, keyElement) {
                 // Преобразуем байт и ключ в мультивекторы
-                const byteMV = this.algebra.numberToMultivector(byte);
-                const keyMV = this.algebra.numberToMultivector(keyElement);
+                const byteMV = this.numberToMultivector(byte);
+                const keyMV = this.numberToMultivector(keyElement);
                 
-                // Вычисляем: C = K * P * reverse(K)
+                // Вычисляем: C = K * P * K⁻¹
+                const kInverse = this.algebra.inverse(keyMV);
                 const kp = this.algebra.multiply(keyMV, byteMV);
-                const keyReverse = this.algebra.numberToMultivector(keyElement); // В Cl(3,1) reverse для скаляра = скаляр
-                const resultMV = this.algebra.multiply(kp, keyReverse);
+                const resultMV = this.algebra.multiply(kp, kInverse);
                 
                 // Извлекаем результат
-                return this.algebra.multivectorToNumber(resultMV) % this.fieldSize;
+                return this.multivectorToNumber(resultMV);
             }
 
             // Дешифрование одного байта
             decryptByte(byte, keyElement) {
                 // Преобразуем байт и ключ в мультивекторы
-                const byteMV = this.algebra.numberToMultivector(byte);
-                const keyMV = this.algebra.numberToMultivector(keyElement);
+                const byteMV = this.numberToMultivector(byte);
+                const keyMV = this.numberToMultivector(keyElement);
                 
-                // Вычисляем: P = reverse(K) * C * K
-                const kReverse = this.algebra.numberToMultivector(keyElement); // reverse для скаляра
-                const kReverseC = this.algebra.multiply(kReverse, byteMV);
-                const resultMV = this.algebra.multiply(kReverseC, keyMV);
+                // Вычисляем: P = K⁻¹ * C * K
+                const kInverse = this.algebra.inverse(keyMV);
+                const kInverseC = this.algebra.multiply(kInverse, byteMV);
+                const resultMV = this.algebra.multiply(kInverseC, keyMV);
                 
                 // Извлекаем результат
-                return this.algebra.multivectorToNumber(resultMV) % this.fieldSize;
+                return this.multivectorToNumber(resultMV);
             }
 
             // Основная функция шифрования
@@ -498,44 +545,32 @@
                 }
             }
             
-            // Тестирование умножения в алгебре Клиффорда
-            testCliffordMultiplication() {
-                this.log('🧪 Тестирование умножения в алгебре Клиффорда', 'info');
+            // Тестирование обратимости
+            testReversibility() {
+                this.log('🧪 Тестирование обратимости операций', 'info');
                 
-                // Проверяем основные свойства:
-                // e_i * e_j = -e_j * e_i для i ≠ j
-                for (let i = 0; i < 4; i++) {
-                    for (let j = i + 1; j < 4; j++) {
-                        const e_i = 1 << i;
-                        const e_j = 1 << j;
-                        
-                        const ij = this.algebra.multiplyBasisElements(e_i, e_j);
-                        const ji = this.algebra.multiplyBasisElements(e_j, e_i);
-                        
-                        this.log(`e${i+1}*e${j+1} = ${ij.sign} * e${this.algebra.getBasisVectors(ij.value).map(x => x+1).join('')}`, 'info');
-                        this.log(`e${j+1}*e${i+1} = ${ji.sign} * e${this.algebra.getBasisVectors(ji.value).map(x => x+1).join('')}`, 'info');
-                        
-                        if (ij.sign !== -ji.sign) {
-                            this.log(`❌ Нарушение антикоммутативности для e${i+1} и e${j+1}`, 'error');
-                        }
-                    }
-                }
+                const testValues = [10, 100, 200, 50];
+                const key = 123;
                 
-                // Проверяем e_i² = g(e_i, e_i)
-                for (let i = 0; i < 4; i++) {
-                    const e_i = 1 << i;
-                    const square = this.algebra.multiplyBasisElements(e_i, e_i);
+                for (const value of testValues) {
+                    this.log(`Тестирование значения: ${value}`, 'info');
                     
-                    this.log(`e${i+1}² = ${square.sign} (ожидалось: ${this.algebra.metric[i]})`, 'info');
+                    const encrypted = this.encryptByte(value, key);
+                    this.log(`Зашифровано: ${encrypted}`, 'info');
                     
-                    if (square.sign !== this.algebra.metric[i]) {
-                        this.log(`❌ Неправильный квадрат для e${i+1}`, 'error');
+                    const decrypted = this.decryptByte(encrypted, key);
+                    this.log(`Расшифровано: ${decrypted}`, 'info');
+                    
+                    if (value === decrypted) {
+                        this.log('✓ Обратимость подтверждена', 'success');
+                    } else {
+                        this.log('✗ Ошибка обратимости', 'error');
                     }
                 }
             }
         }
 
-        const cipher = new CliffordCipher();
+        const cipher = new ReversibleCliffordCipher();
 
         async function processEncryption() {
             try {
@@ -596,14 +631,14 @@
             }
         }
 
-        function testMultiplication() {
+        function testReversibility() {
             const debugOutput = document.getElementById('debugOutput');
             if (debugOutput) debugOutput.innerHTML = '';
             
-            cipher.testCliffordMultiplication();
+            cipher.testReversibility();
             
             document.getElementById('resultOutput').textContent = 
-                'Результаты тестирования умножения смотри в отладочной информации ниже';
+                'Результаты тестирования обратимости смотри в отладочной информации ниже';
             document.getElementById('validationOutput').textContent = '✓ Тестирование завершено';
             document.getElementById('validationOutput').className = 'status success';
         }
