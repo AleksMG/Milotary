@@ -36,6 +36,16 @@
             border-radius: 4px;
             resize: vertical;
         }
+        input {
+            width: 100%;
+            background: #1c1c1c;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            font-family: monospace;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
         button {
             background: #00ff00;
             color: #000;
@@ -104,6 +114,12 @@
             margin: 10px 0;
             border: 1px solid #444;
         }
+        .hint {
+            color: #ff9900;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -112,21 +128,25 @@
     <div class="container">
         <h2>📝 Исходные данные</h2>
         <textarea id="inputText">Привет мир! Тестируем исправленное шифрование.</textarea>
+        
+        <h2>🔑 Ключ шифрования</h2>
+        <input type="text" id="encryptionKey" placeholder="Введите ключ шифрования" value="CliffordKey123">
+        
         <div class="flex-row">
             <button onclick="processEncryption()">🔄 Зашифровать</button>
             <button onclick="processDecryption()">↩️ Расшифровать</button>
             <button onclick="clearAll()">❌ Очистить</button>
         </div>
+        <div class="hint">Для дешифрования вставьте зашифрованный текст в поле выше и нажмите "Расшифровать"</div>
     </div>
 
     <div class="container">
         <h2>🔧 Параметры системы</h2>
         <div class="debug">
             <strong>Алгебра Клиффорда для текстового шифрования</strong><br>
-            • Размерность: 8<br>
-            • Уровней шифрования: 3<br>
-            • Метод: матричное преобразование Клиффорда<br>
-            • Основа: геометрические преобразования текста
+            • Метод: векторное преобразование Клиффорда<br>
+            • Основа: геометрические преобразования текста<br>
+            • Однопроходное шифрование (без раундов)
         </div>
     </div>
 
@@ -144,8 +164,6 @@
     <script>
         class TextCliffordCipher {
             constructor() {
-                this.dimension = 8;
-                this.levels = 3;
                 this.debugLog = [];
             }
 
@@ -155,50 +173,37 @@
                 return message;
             }
 
-            // Генерация ключа на основе текста
-            generateKey(text) {
+            // Генерация числового ключа на основе строки
+            generateKey(keyString) {
                 let key = 0;
-                for (let i = 0; i < text.length; i++) {
-                    key = (key + text.charCodeAt(i) * (i + 1)) % 65536;
+                for (let i = 0; i < keyString.length; i++) {
+                    key = (key + keyString.charCodeAt(i) * (i + 1)) % 65536;
                 }
-                this.log(`🔑 Сгенерирован ключ из текста: ${key}`);
+                this.log(`🔑 Сгенерирован числовой ключ: ${key} из строки: "${keyString}"`);
                 return key;
             }
 
-            // Создание матрицы преобразования Клиффорда
-            createCliffordMatrix(key, size) {
-                const matrix = [];
-                for (let i = 0; i < size; i++) {
-                    matrix[i] = [];
-                    for (let j = 0; j < size; j++) {
-                        // Детерминистическое создание элементов матрицы на основе ключа
-                        const value = Math.sin(key * (i + 1) + key * (j + 1)) * 1000;
-                        matrix[i][j] = Math.abs(Math.floor(value) % 256);
-                    }
+            // Создание вектора преобразования Клиффорда
+            createCliffordVector(key, length) {
+                const vector = [];
+                for (let i = 0; i < length; i++) {
+                    // Детерминистическое создание элементов вектора на основе ключа
+                    const value = Math.sin(key * (i + 1)) * 10000;
+                    vector.push(Math.abs(Math.floor(value) % 65536));
                 }
-                return matrix;
+                return vector;
             }
 
             // Применение преобразования Клиффорда к тексту
-            applyCliffordTransformation(text, matrix) {
+            applyCliffordTransformation(text, vector) {
                 let result = '';
-                const matrixSize = matrix.length;
                 
                 for (let i = 0; i < text.length; i++) {
                     const charCode = text.charCodeAt(i);
-                    let transformedCode = 0;
-                    
-                    // Применяем матричное преобразование (упрощенная версия)
-                    for (let j = 0; j < matrixSize; j++) {
-                        if (j < text.length) {
-                            const otherCharCode = text.charCodeAt((i + j) % text.length);
-                            transformedCode += matrix[i % matrixSize][j] * otherCharCode;
-                        }
-                    }
+                    // Применяем преобразование Клиффорда
+                    const transformedCode = (charCode + vector[i % vector.length]) % 65536;
                     
                     // Нормализуем и добавляем к результату
-                    transformedCode = Math.abs(transformedCode) % 65536;
-                    if (transformedCode < 32) transformedCode += 32; // Убедимся, что это печатный символ
                     result += String.fromCharCode(transformedCode);
                 }
                 
@@ -206,26 +211,21 @@
             }
 
             // Основная функция шифрования
-            encryptText(text) {
+            encryptText(text, keyString) {
                 this.debugLog = [];
                 this.log('🚀 Начало шифрования текста', 'success');
                 
-                const key = this.generateKey(text);
-                const matrix = this.createCliffordMatrix(key, this.dimension);
+                const key = this.generateKey(keyString);
+                const vector = this.createCliffordVector(key, text.length);
                 
                 this.log(`📊 Исходный текст: "${text}" (${text.length} символов)`);
-                this.log(`📐 Матрица преобразования: ${JSON.stringify(matrix)}`);
+                this.log(`📐 Вектор преобразования: [${vector.slice(0, 5)}${vector.length > 5 ? '...' : ''}]`);
 
-                let transformedText = text;
+                const transformedText = this.applyCliffordTransformation(text, vector);
+
+                this.log(`📦 Зашифрованный текст: "${transformedText}"`);
+                this.log('🎯 Шифрование завершено', 'success');
                 
-                // Многоуровневое шифрование
-                for (let level = 0; level < this.levels; level++) {
-                    this.log(`\n🔢 Уровень шифрования ${level + 1}/${this.levels}`, 'warning');
-                    transformedText = this.applyCliffordTransformation(transformedText, matrix);
-                    this.log(`📄 Текст после уровня ${level + 1}: "${transformedText}"`);
-                }
-
-                this.log('\n🎯 Шифрование завершено', 'success');
                 return {
                     ciphertext: transformedText,
                     debug: this.debugLog,
@@ -235,82 +235,37 @@
             }
 
             // Обратное преобразование Клиффорда
-            reverseCliffordTransformation(text, matrix) {
+            reverseCliffordTransformation(text, vector) {
                 let result = '';
-                const matrixSize = matrix.length;
-                const matrixDet = this.matrixDeterminant(matrix);
                 
-                // Для простоты используем обратную матрицу (упрощенный подход)
-                if (matrixDet !== 0) {
-                    for (let i = 0; i < text.length; i++) {
-                        const charCode = text.charCodeAt(i);
-                        let reversedCode = 0;
-                        
-                        for (let j = 0; j < matrixSize; j++) {
-                            if (j < text.length) {
-                                const otherCharCode = text.charCodeAt((i + j) % text.length);
-                                reversedCode += matrix[j][i % matrixSize] * otherCharCode;
-                            }
-                        }
-                        
-                        reversedCode = Math.abs(reversedCode) % 65536;
-                        if (reversedCode < 32) reversedCode += 32;
-                        result += String.fromCharCode(reversedCode);
-                    }
-                } else {
-                    // Если определитель нулевой, используем альтернативный метод
-                    result = this.alternativeDecryption(text, matrix);
-                }
-                
-                return result;
-            }
-
-            // Альтернативный метод дешифрования
-            alternativeDecryption(text, matrix) {
-                let result = '';
                 for (let i = 0; i < text.length; i++) {
                     const charCode = text.charCodeAt(i);
-                    // Упрощенное обратное преобразование
-                    let reversedCode = (charCode - matrix[i % matrix.length][0] + 65536) % 65536;
-                    if (reversedCode < 32) reversedCode += 32;
+                    // Применяем обратное преобразование Клиффорда
+                    const reversedCode = (charCode - vector[i % vector.length] + 65536) % 65536;
+                    
+                    // Нормализуем и добавляем к результату
                     result += String.fromCharCode(reversedCode);
                 }
+                
                 return result;
-            }
-
-            // Вычисление определителя матрицы (упрощенное)
-            matrixDeterminant(matrix) {
-                if (matrix.length === 2) {
-                    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
-                }
-                let det = 0;
-                for (let i = 0; i < matrix.length; i++) {
-                    det += matrix[0][i] * (i % 2 === 0 ? 1 : -1);
-                }
-                return det;
             }
 
             // Основная функция дешифрования
-            decryptText(ciphertext, originalText) {
+            decryptText(ciphertext, keyString) {
                 this.debugLog = [];
                 this.log('🔓 Начало дешифрования текста', 'success');
                 
-                const key = this.generateKey(originalText);
-                const matrix = this.createCliffordMatrix(key, this.dimension);
+                const key = this.generateKey(keyString);
+                const vector = this.createCliffordVector(key, ciphertext.length);
                 
                 this.log(`📊 Зашифрованный текст: "${ciphertext}" (${ciphertext.length} символов)`);
-                this.log(`📐 Матрица преобразования: ${JSON.stringify(matrix)}`);
+                this.log(`📐 Вектор преобразования: [${vector.slice(0, 5)}${vector.length > 5 ? '...' : ''}]`);
 
-                let decryptedText = ciphertext;
+                const decryptedText = this.reverseCliffordTransformation(ciphertext, vector);
+
+                this.log(`📄 Расшифрованный текст: "${decryptedText}"`);
+                this.log('🎯 Дешифрование завершено', 'success');
                 
-                // Многоуровневое дешифрование (в обратном порядке)
-                for (let level = this.levels - 1; level >= 0; level--) {
-                    this.log(`\n🔢 Уровень дешифрования ${this.levels - level}/${this.levels}`, 'warning');
-                    decryptedText = this.reverseCliffordTransformation(decryptedText, matrix);
-                    this.log(`📄 Текст после уровня ${this.levels - level}: "${decryptedText}"`);
-                }
-
-                this.log('\n🎯 Дешифрование завершено', 'success');
                 return {
                     plaintext: decryptedText,
                     debug: this.debugLog
@@ -323,12 +278,19 @@
 
         function processEncryption() {
             const inputText = document.getElementById('inputText').value;
+            const keyString = document.getElementById('encryptionKey').value;
+            
             if (!inputText) {
                 alert('Введите текст для шифрования');
                 return;
             }
+            
+            if (!keyString) {
+                alert('Введите ключ шифрования');
+                return;
+            }
 
-            const result = cipher.encryptText(inputText);
+            const result = cipher.encryptText(inputText, keyString);
             lastResult = result;
 
             // Отображение процесса
@@ -343,7 +305,7 @@
                 `📦 Зашифрованный текст: "${result.ciphertext}"\n\n` +
                 `📄 Исходный текст: "${result.original}"\n` +
                 `🔢 Длина: ${result.ciphertext.length} символов\n` +
-                `🔑 Ключ: ${result.key}`;
+                `🔑 Числовой ключ: ${result.key}`;
 
             // Проверка целостности
             document.getElementById('validationOutput').textContent = '✓ Шифрование выполнено успешно';
@@ -351,30 +313,35 @@
         }
 
         function processDecryption() {
-            if (!lastResult) {
-                alert('Сначала зашифруйте текст');
+            const inputText = document.getElementById('inputText').value;
+            const keyString = document.getElementById('encryptionKey').value;
+            
+            if (!inputText) {
+                alert('Введите текст для дешифрования');
+                return;
+            }
+            
+            if (!keyString) {
+                alert('Введите ключ шифрования');
                 return;
             }
 
-            const inputText = document.getElementById('inputText').value;
-            const result = cipher.decryptText(lastResult.ciphertext, inputText);
+            const result = cipher.decryptText(inputText, keyString);
             
             document.getElementById('processOutput').innerHTML = 
                 result.debug.map(item => `<span class="${item.type}">${item.message}</span>`).join('\n');
             
-            const isMatch = result.plaintext === inputText;
             document.getElementById('resultOutput').innerHTML = 
-                `📄 Расшифрованный текст: "${result.plaintext}"\n\n` +
-                `✅ Совпадение с исходным: ${isMatch ? 'ДА' : 'НЕТ'}`;
+                `📄 Расшифрованный текст: "${result.plaintext}"`;
             
             // Обновление статуса
-            document.getElementById('validationOutput').textContent = isMatch ? 
-                '✓ Текст успешно расшифрован' : '✗ Ошибка при расшифровании';
-            document.getElementById('validationOutput').className = isMatch ? 'status valid' : 'status invalid';
+            document.getElementById('validationOutput').textContent = '✓ Текст успешно расшифрован';
+            document.getElementById('validationOutput').className = 'status valid';
         }
 
         function clearAll() {
             document.getElementById('inputText').value = '';
+            document.getElementById('encryptionKey').value = 'CliffordKey123';
             document.getElementById('processOutput').innerHTML = 'Ожидание данных...';
             document.getElementById('resultOutput').innerHTML = '—';
             document.getElementById('validationOutput').textContent = '—';
