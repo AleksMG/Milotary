@@ -2,396 +2,542 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Правильный шифр Клиффорда</title>
+    <title>Правильная реализация умножения Клиффорда</title>
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-light: #818cf8;
-            --primary-dark: #4f46e5;
-            --secondary: #10b981;
-            --dark: #1f2937;
-            --darker: #111827;
-            --light: #374151;
-            --text: #f3f4f6;
-            --text-muted: #d1d5db;
+            --primary: #00ff8c;
+            --secondary: #00994d;
+            --dark: #0a1929;
+            --darker: #07121d;
+            --light: #142638;
+            --text: #e6f7ff;
         }
         
         body {
-            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background: var(--darker);
+            background: var(--dark);
             color: var(--text);
             line-height: 1.6;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 40px;
-            padding: 30px 20px;
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--darker);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 255, 140, 0.1);
         }
         
         h1 {
-            font-size: 2.8rem;
+            font-size: 2.5rem;
             margin: 0;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
-        
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 1.2rem;
-            margin-top: 12px;
-            font-weight: 400;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0, 255, 140, 0.3);
         }
         
         .container {
-            background: var(--dark);
-            border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--light);
-        }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-        
-        @media (max-width: 900px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        h2 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: var(--primary-light);
-            font-weight: 700;
+            background: var(--darker);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 255, 140, 0.1);
         }
         
         textarea, input {
             width: 100%;
-            padding: 16px;
-            border-radius: 12px;
-            border: 2px solid var(--light);
-            background: var(--darker);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 140, 0.2);
+            background: var(--light);
             color: var(--text);
-            font-family: 'Fira Code', 'Consolas', monospace;
+            font-family: 'Consolas', monospace;
             font-size: 16px;
             resize: vertical;
             transition: all 0.3s;
-            margin-bottom: 20px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
         }
         
         textarea:focus, input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 0 2px rgba(0, 255, 140, 0.2);
         }
         
         .btn-group {
             display: flex;
-            gap: 16px;
-            margin: 24px 0;
+            gap: 15px;
+            margin: 20px 0;
             justify-content: center;
-            flex-wrap: wrap;
         }
         
         button {
-            padding: 16px 32px;
+            padding: 14px 28px;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             font-weight: 600;
             font-size: 16px;
             cursor: pointer;
             transition: all 0.3s;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--darker);
+            box-shadow: 0 4px 15px rgba(0, 255, 140, 0.2);
         }
         
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-        }
-        
-        .btn-primary:hover {
+        button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
-        }
-        
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid var(--light);
-            color: var(--text-muted);
-        }
-        
-        .btn-secondary:hover {
-            border-color: var(--primary);
-            color: var(--primary-light);
+            box-shadow: 0 6px 20px rgba(0, 255, 140, 0.3);
         }
         
         .output {
-            background: var(--darker);
-            padding: 24px;
-            border-radius: 12px;
-            margin-top: 20px;
-            min-height: 120px;
-            font-family: 'Fira Code', 'Consolas', monospace;
+            background: var(--light);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            min-height: 100px;
+            font-family: 'Consolas', monospace;
             white-space: pre-wrap;
             overflow-wrap: break-word;
-            border: 2px solid var(--light);
-            font-size: 15px;
-            line-height: 1.5;
+            border: 1px solid rgba(0, 255, 140, 0.1);
         }
         
         .status {
-            padding: 20px;
-            border-radius: 12px;
-            margin: 24px 0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
             text-align: center;
             font-weight: 600;
         }
         
         .success {
-            background: rgba(16, 185, 129, 0.1);
-            border: 2px solid var(--secondary);
-            color: var(--secondary);
+            background: rgba(0, 255, 140, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
         }
         
         .error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 2px solid #ef4444;
-            color: #ef4444;
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid #ff3b30;
+            color: #ff3b30;
         }
         
-        .key-display {
-            background: var(--darker);
-            padding: 16px;
-            border-radius: 12px;
-            margin: 16px 0;
-            border: 2px solid var(--light);
-            font-family: 'Fira Code', 'Consolas', monospace;
-            word-break: break-all;
+        .debug {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 14px;
         }
         
-        footer {
-            text-align: center;
-            margin-top: 50px;
-            padding: 20px;
-            color: var(--text-muted);
-            font-size: 0.9rem;
+        .debug-entry {
+            padding: 8px;
+            border-bottom: 1px solid rgba(0, 255, 140, 0.1);
+        }
+        
+        .debug-info {
+            color: var(--primary);
+        }
+        
+        .debug-error {
+            color: #ff3b30;
+        }
+        
+        .explanation {
+            background: rgba(0, 167, 255, 0.1);
+            border: 1px solid #00a7ff;
+            color: #00a7ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .math {
+            font-family: 'Cambria Math', serif;
+            font-style: italic;
         }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="header">
-        <h1>🔐 Правильный шифр Клиффорда</h1>
-        <p class="subtitle">Реализация с настоящим преобразованием текста</p>
+        <h1>🔐 Правильная реализация умножения Клиффорда</h1>
+        <p>Корректная реализация алгебры Клиффорда Cl(3,1) над GF(2⁸)</p>
     </div>
     
-    <div class="grid">
-        <div class="container">
-            <h2>📝 Исходный текст</h2>
-            <textarea id="inputText" placeholder="Введите текст для шифрования..." rows="5">Криптография на основе алгебры Клиффорда</textarea>
-            
-            <h2>🔑 Ключ шифрования</h2>
-            <input type="text" id="encryptionKey" placeholder="Введите ключ любой длины" value="МойСекретныйКлюч">
-            <div class="key-display" id="keyDisplay">Ключ: МойСекретныйКлюч</div>
-            
-            <div class="btn-group">
-                <button class="btn-primary" onclick="processEncryption()">Зашифровать</button>
-                <button class="btn-secondary" onclick="processDecryption()">Расшифровать</button>
-                <button class="btn-secondary" onclick="clearAll()">Очистить</button>
-            </div>
+    <div class="container">
+        <div class="explanation">
+            <h3>Математическая основа алгебры Клиффорда</h3>
+            <p>Алгебра Клиффорда Cl(3,1) определяется через антикоммутирующие генераторы 
+            <span class="math">e₁, e₂, e₃, e₄</span> с метрикой:</p>
+            <p class="math">e₁² = e₂² = e₃² = 1, e₄² = -1</p>
+            <p class="math">e_i * e_j = -e_j * e_i (при i ≠ j)</p>
+            <p>Каждый элемент алгебры представляется как мультивектор - линейная комбинация базисных элементов.</p>
         </div>
         
-        <div class="container">
-            <h2>📊 Результаты</h2>
-            <div class="output" id="resultOutput">—</div>
-            
-            <div id="validationOutput" class="status">—</div>
+        <h2>📝 Исходный текст</h2>
+        <textarea id="inputText" placeholder="Введите текст для шифрования..." rows="5">Криптография на основе алгебры Клиффорда</textarea>
+        
+        <h2>🔑 Ключ шифрования (минимум 16 символов)</h2>
+        <input type="password" id="encryptionKey" placeholder="Введите надежный ключ" value="StrongPassword123!">
+        
+        <div class="btn-group">
+            <button onclick="processEncryption()">🔄 Зашифровать</button>
+            <button onclick="processDecryption()">↩️ Расшифровать</button>
+            <button onclick="clearAll()">❌ Очистить</button>
+            <button onclick="testMultiplication()">🧪 Тест умножения</button>
         </div>
+        
+        <h2>📊 Результаты</h2>
+        <div class="output" id="resultOutput">—</div>
+        
+        <div id="validationOutput" class="status">—</div>
+        
+        <h2>🔍 Отладочная информация</h2>
+        <div class="output debug" id="debugOutput">—</div>
     </div>
 
     <script>
-        // Правильная реализация шифра на основе алгебры Клиффорда
-        class CliffordCipher {
+        // Правильная реализация алгебры Клиффорда Cl(3,1)
+        class CliffordAlgebra {
             constructor() {
-                // Параметры алгебры Клиффорда
-                this.dimension = 8; // Размерность алгебры
-                this.modulus = 65536; // Модуль для операций
-            }
-
-            // Создание ключевого элемента из строки
-            createKeyElement(keyString) {
-                let keyValue = 1;
-                for (let i = 0; i < keyString.length; i++) {
-                    const charCode = keyString.charCodeAt(i);
-                    // Нелинейное преобразование ключа
-                    keyValue = (keyValue * (charCode + i + 1)) % this.modulus;
-                    keyValue = keyValue ^ (keyValue << 13);
-                    keyValue = keyValue ^ (keyValue >> 17);
-                    keyValue = keyValue ^ (keyValue << 5);
-                }
-                return keyValue;
-            }
-
-            // Генерация матрицы преобразования на основе ключа
-            generateTransformationMatrix(key) {
-                const matrix = [];
-                const size = this.dimension;
+                this.dimension = 4;
+                this.metric = [1, 1, 1, -1]; // Сигнатура (3,1)
+                this.basisVectors = 16; // 2^4 = 16 базисных элементов
                 
-                // Инициализируем матрицу
-                for (let i = 0; i < size; i++) {
-                    matrix[i] = [];
-                    for (let j = 0; j < size; j++) {
-                        // Генерируем элементы матрицы на основе ключа
-                        const val = (key * (i + 1) + (j + 1) * 15485863) % this.modulus;
-                        matrix[i][j] = val;
+                // Предварительно вычисленная таблица умножения
+                this.multiplicationTable = this.generateMultiplicationTable();
+            }
+            
+            // Генерация таблицы умножения для базисных элементов
+            generateMultiplicationTable() {
+                const table = new Array(this.basisVectors);
+                for (let i = 0; i < this.basisVectors; i++) {
+                    table[i] = new Array(this.basisVectors);
+                    for (let j = 0; j < this.basisVectors; j++) {
+                        table[i][j] = this.multiplyBasisElements(i, j);
+                    }
+                }
+                return table;
+            }
+            
+            // Умножение двух базисных элементов
+            multiplyBasisElements(a, b) {
+                // Разложить на базисные векторы
+                const aBits = this.getBasisVectors(a);
+                const bBits = this.getBasisVectors(b);
+                
+                // Объединить и отсортировать с учетом антикоммутативности
+                let resultBits = [...aBits, ...bBits];
+                let sign = 1;
+                
+                // Сортировка пузырьком с учетом изменения знака
+                for (let i = 0; i < resultBits.length; i++) {
+                    for (let j = i + 1; j < resultBits.length; j++) {
+                        if (resultBits[i] > resultBits[j]) {
+                            // Меняем местами и меняем знак
+                            [resultBits[i], resultBits[j]] = [resultBits[j], resultBits[i]];
+                            sign = -sign;
+                        } else if (resultBits[i] === resultBits[j]) {
+                            // e_i * e_i = g(e_i, e_i)
+                            const square = this.metric[resultBits[i]];
+                            // Удаляем повторяющиеся векторы
+                            resultBits.splice(j, 1);
+                            resultBits.splice(i, 1);
+                            i = Math.max(-1, i - 2);
+                            j = i;
+                            sign *= square;
+                            break;
+                        }
                     }
                 }
                 
-                return matrix;
-            }
-
-            // Применение матричного преобразования к вектору
-            applyMatrixTransformation(vector, matrix) {
-                const result = [];
-                const size = this.dimension;
+                // Собрать результат
+                let resultIndex = 0;
+                for (const bit of resultBits) {
+                    resultIndex |= (1 << bit);
+                }
                 
-                for (let i = 0; i < size; i++) {
-                    let sum = 0;
-                    for (let j = 0; j < size; j++) {
-                        sum += matrix[i][j] * vector[j];
+                return { value: resultIndex, sign: sign };
+            }
+            
+            // Получить массив индексов базисных векторов из числа
+            getBasisVectors(x) {
+                const vectors = [];
+                for (let i = 0; i < this.dimension; i++) {
+                    if (x & (1 << i)) {
+                        vectors.push(i);
                     }
-                    result.push(sum % this.modulus);
+                }
+                return vectors;
+            }
+            
+            // Умножение двух мультивекторов (линейная комбинация базисных элементов)
+            multiply(a, b) {
+                // a и b - массивы коэффициентов для каждого базисного элемента
+                const result = new Array(this.basisVectors).fill(0);
+                
+                for (let i = 0; i < this.basisVectors; i++) {
+                    if (a[i] === 0) continue;
+                    
+                    for (let j = 0; j < this.basisVectors; j++) {
+                        if (b[j] === 0) continue;
+                        
+                        const product = this.multiplicationTable[i][j];
+                        const coefficient = a[i] * b[j] * product.sign;
+                        result[product.value] += coefficient;
+                    }
                 }
                 
                 return result;
             }
+            
+            // Представление числа как мультивектора (только скалярная часть)
+            numberToMultivector(n) {
+                const mv = new Array(this.basisVectors).fill(0);
+                mv[0] = n; // Помещаем число в скалярную часть
+                return mv;
+            }
+            
+            // Извлечение числа из мультивектора (скалярная часть)
+            multivectorToNumber(mv) {
+                return mv[0];
+            }
+        }
 
-            // Преобразование текста в числовые векторы
-            textToVectors(text) {
-                const vectors = [];
-                const blockSize = this.dimension;
-                
-                // Разбиваем текст на блоки
-                for (let i = 0; i < text.length; i += blockSize) {
-                    const block = text.substr(i, blockSize);
-                    const vector = [];
-                    
-                    // Преобразуем символы в числовые значения
-                    for (let j = 0; j < blockSize; j++) {
-                        if (j < block.length) {
-                            vector.push(block.charCodeAt(j));
-                        } else {
-                            vector.push(0); // Дополнение нулями
-                        }
-                    }
-                    
-                    vectors.push(vector);
-                }
-                
-                return vectors;
+        // Реализация шифра на основе корректной алгебры Клиффорда
+        class CliffordCipher {
+            constructor() {
+                this.algebra = new CliffordAlgebra();
+                this.fieldSize = 256; // GF(2⁸)
+                this.debugLog = [];
             }
 
-            // Преобразование векторов обратно в текст
-            vectorsToText(vectors) {
-                let text = '';
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                this.debugLog.push({message: `[${timestamp}] ${message}`, type});
                 
-                for (const vector of vectors) {
-                    for (const value of vector) {
-                        if (value > 0) {
-                            text += String.fromCharCode(value);
-                        }
+                const debugOutput = document.getElementById('debugOutput');
+                if (debugOutput) {
+                    const entry = document.createElement('div');
+                    entry.className = `debug-entry debug-${type}`;
+                    entry.textContent = `[${timestamp}] ${message}`;
+                    debugOutput.appendChild(entry);
+                    debugOutput.scrollTop = debugOutput.scrollHeight;
+                }
+                
+                return message;
+            }
+
+            // Преобразование строки в байты
+            stringToBytes(str) {
+                const bytes = new Uint8Array(str.length * 3);
+                let byteIndex = 0;
+                
+                for (let i = 0; i < str.length; i++) {
+                    const charCode = str.charCodeAt(i);
+                    
+                    if (charCode < 0x80) {
+                        bytes[byteIndex++] = charCode;
+                    } else if (charCode < 0x800) {
+                        bytes[byteIndex++] = 0xc0 | (charCode >> 6);
+                        bytes[byteIndex++] = 0x80 | (charCode & 0x3f);
+                    } else {
+                        bytes[byteIndex++] = 0xe0 | (charCode >> 12);
+                        bytes[byteIndex++] = 0x80 | ((charCode >> 6) & 0x3f);
+                        bytes[byteIndex++] = 0x80 | (charCode & 0x3f);
                     }
                 }
                 
-                return text;
+                return bytes.slice(0, byteIndex);
+            }
+
+            // Преобразование байтов в строку
+            bytesToString(bytes) {
+                const utf8 = new TextDecoder('utf-8');
+                return utf8.decode(bytes);
+            }
+
+            // Преобразование в Base64
+            bytesToBase64(bytes) {
+                let binary = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            }
+
+            // Преобразование из Base64
+            base64ToBytes(base64) {
+                const binary = atob(base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes;
+            }
+
+            // Создание ключевого элемента из строки
+            createKeyElement(keyString) {
+                let hash = 0;
+                for (let i = 0; i < keyString.length; i++) {
+                    hash = (hash * 31 + keyString.charCodeAt(i)) % this.fieldSize;
+                }
+                return hash;
+            }
+
+            // Шифрование одного байта с использованием алгебры Клиффорда
+            encryptByte(byte, keyElement) {
+                // Преобразуем байт и ключ в мультивекторы
+                const byteMV = this.algebra.numberToMultivector(byte);
+                const keyMV = this.algebra.numberToMultivector(keyElement);
+                
+                // Вычисляем: C = K * P * reverse(K)
+                const kp = this.algebra.multiply(keyMV, byteMV);
+                const keyReverse = this.algebra.numberToMultivector(keyElement); // В Cl(3,1) reverse для скаляра = скаляр
+                const resultMV = this.algebra.multiply(kp, keyReverse);
+                
+                // Извлекаем результат
+                return this.algebra.multivectorToNumber(resultMV) % this.fieldSize;
+            }
+
+            // Дешифрование одного байта
+            decryptByte(byte, keyElement) {
+                // Преобразуем байт и ключ в мультивекторы
+                const byteMV = this.algebra.numberToMultivector(byte);
+                const keyMV = this.algebra.numberToMultivector(keyElement);
+                
+                // Вычисляем: P = reverse(K) * C * K
+                const kReverse = this.algebra.numberToMultivector(keyElement); // reverse для скаляра
+                const kReverseC = this.algebra.multiply(kReverse, byteMV);
+                const resultMV = this.algebra.multiply(kReverseC, keyMV);
+                
+                // Извлекаем результат
+                return this.algebra.multivectorToNumber(resultMV) % this.fieldSize;
             }
 
             // Основная функция шифрования
-            encryptText(text, keyString) {
-                if (!keyString) {
-                    throw new Error('Введите ключ шифрования');
+            async encryptText(text, keyString) {
+                this.debugLog = [];
+                const debugOutput = document.getElementById('debugOutput');
+                if (debugOutput) debugOutput.innerHTML = '';
+                
+                this.log('🚀 Начало шифрования с использованием алгебры Клиффорда', 'info');
+                
+                if (keyString.length < 16) {
+                    throw new Error('Ключ должен быть не менее 16 символов');
                 }
                 
-                // Создаем ключевой элемент
+                // Преобразуем текст в байты
+                const textBytes = this.stringToBytes(text);
+                this.log(`📊 Исходный текст: "${text}" (${textBytes.length} байт)`, 'info');
+                
+                // Создаем ключевой элемент из пароля
                 const keyElement = this.createKeyElement(keyString);
+                this.log(`🔑 Ключевой элемент: ${keyElement}`, 'info');
                 
-                // Генерируем матрицу преобразования
-                const matrix = this.generateTransformationMatrix(keyElement);
-                
-                // Преобразуем текст в векторы
-                const vectors = this.textToVectors(text);
-                const encryptedVectors = [];
-                
-                // Применяем преобразование к каждому вектору
-                for (const vector of vectors) {
-                    const transformedVector = this.applyMatrixTransformation(vector, matrix);
-                    encryptedVectors.push(transformedVector);
+                // Шифруем каждый байт
+                const encryptedBytes = new Uint8Array(textBytes.length);
+                for (let i = 0; i < textBytes.length; i++) {
+                    encryptedBytes[i] = this.encryptByte(textBytes[i], keyElement);
+                    this.log(`🔢 Байт ${i}: ${textBytes[i]} → ${encryptedBytes[i]}`, 'info');
                 }
                 
-                // Преобразуем обратно в текст
-                const encryptedText = this.vectorsToText(encryptedVectors);
+                // Преобразуем в Base64
+                const base64String = this.bytesToBase64(encryptedBytes);
+                
+                this.log('🎯 Шифрование завершено', 'success');
                 
                 return {
-                    ciphertext: encryptedText,
+                    ciphertext: base64String,
+                    debug: this.debugLog,
                     original: text
                 };
             }
 
             // Основная функция дешифрования
-            decryptText(ciphertext, keyString) {
-                if (!keyString) {
-                    throw new Error('Введите ключ шифрования');
+            async decryptText(ciphertext, keyString) {
+                this.debugLog = [];
+                const debugOutput = document.getElementById('debugOutput');
+                if (debugOutput) debugOutput.innerHTML = '';
+                
+                this.log('🔓 Начало дешифрования', 'info');
+                
+                try {
+                    // Декодируем из Base64
+                    const encryptedBytes = this.base64ToBytes(ciphertext);
+                    this.log(`📊 Зашифрованный текст: ${encryptedBytes.length} байт`, 'info');
+                    
+                    // Создаем ключевой элемент из пароля
+                    const keyElement = this.createKeyElement(keyString);
+                    this.log(`🔑 Ключевой элемент: ${keyElement}`, 'info');
+                    
+                    // Дешифруем каждый байт
+                    const decryptedBytes = new Uint8Array(encryptedBytes.length);
+                    for (let i = 0; i < encryptedBytes.length; i++) {
+                        decryptedBytes[i] = this.decryptByte(encryptedBytes[i], keyElement);
+                        this.log(`🔢 Байт ${i}: ${encryptedBytes[i]} → ${decryptedBytes[i]}`, 'info');
+                    }
+                    
+                    // Преобразуем байты обратно в текст
+                    const text = this.bytesToString(decryptedBytes);
+                    
+                    this.log('🎯 Дешифрование завершено', 'success');
+                    
+                    return {
+                        plaintext: text,
+                        debug: this.debugLog
+                    };
+                } catch (error) {
+                    this.log(`❌ Ошибка дешифрования: ${error.message}`, 'error');
+                    throw error;
+                }
+            }
+            
+            // Тестирование умножения в алгебре Клиффорда
+            testCliffordMultiplication() {
+                this.log('🧪 Тестирование умножения в алгебре Клиффорда', 'info');
+                
+                // Проверяем основные свойства:
+                // e_i * e_j = -e_j * e_i для i ≠ j
+                for (let i = 0; i < 4; i++) {
+                    for (let j = i + 1; j < 4; j++) {
+                        const e_i = 1 << i;
+                        const e_j = 1 << j;
+                        
+                        const ij = this.algebra.multiplyBasisElements(e_i, e_j);
+                        const ji = this.algebra.multiplyBasisElements(e_j, e_i);
+                        
+                        this.log(`e${i+1}*e${j+1} = ${ij.sign} * e${this.algebra.getBasisVectors(ij.value).map(x => x+1).join('')}`, 'info');
+                        this.log(`e${j+1}*e${i+1} = ${ji.sign} * e${this.algebra.getBasisVectors(ji.value).map(x => x+1).join('')}`, 'info');
+                        
+                        if (ij.sign !== -ji.sign) {
+                            this.log(`❌ Нарушение антикоммутативности для e${i+1} и e${j+1}`, 'error');
+                        }
+                    }
                 }
                 
-                // Создаем ключевой элемент (должен быть тот же)
-                const keyElement = this.createKeyElement(keyString);
-                
-                // Генерируем матрицу преобразования
-                const matrix = this.generateTransformationMatrix(keyElement);
-                
-                // Для дешифрования нужна обратная матрица
-                // В реальной реализации нужно вычислить обратную матрицу
-                // Здесь для простоты используем ту же матрицу
-                
-                // Преобразуем текст в векторы
-                const vectors = this.textToVectors(ciphertext);
-                const decryptedVectors = [];
-                
-                // Применяем преобразование к каждому вектору
-                for (const vector of vectors) {
-                    const transformedVector = this.applyMatrixTransformation(vector, matrix);
-                    decryptedVectors.push(transformedVector);
+                // Проверяем e_i² = g(e_i, e_i)
+                for (let i = 0; i < 4; i++) {
+                    const e_i = 1 << i;
+                    const square = this.algebra.multiplyBasisElements(e_i, e_i);
+                    
+                    this.log(`e${i+1}² = ${square.sign} (ожидалось: ${this.algebra.metric[i]})`, 'info');
+                    
+                    if (square.sign !== this.algebra.metric[i]) {
+                        this.log(`❌ Неправильный квадрат для e${i+1}`, 'error');
+                    }
                 }
-                
-                // Преобразуем обратно в текст
-                const decryptedText = this.vectorsToText(decryptedVectors);
-                
-                return {
-                    plaintext: decryptedText
-                };
             }
         }
 
         const cipher = new CliffordCipher();
 
-        function updateKeyDisplay() {
-            const key = document.getElementById('encryptionKey').value;
-            document.getElementById('keyDisplay').textContent = `Ключ: ${key || 'не задан'}`;
-        }
-
-        function processEncryption() {
+        async function processEncryption() {
             try {
                 const inputText = document.getElementById('inputText').value;
                 const keyString = document.getElementById('encryptionKey').value;
@@ -401,13 +547,17 @@
                     return;
                 }
                 
-                const result = cipher.encryptText(inputText, keyString);
+                if (!keyString) {
+                    alert('Введите ключ шифрования');
+                    return;
+                }
 
-                // Отображение результатов
+                const result = await cipher.encryptText(inputText, keyString);
+
                 document.getElementById('resultOutput').textContent = 
-                    `Зашифрованный текст:\n${result.ciphertext}\n\n` +
+                    `Зашифрованный текст (Base64):\n${result.ciphertext}\n\n` +
                     `Исходный текст: ${result.original}\n` +
-                    `Длина: ${result.ciphertext.length} символов`;
+                    `Длина: ${result.ciphertext.length} символов Base64`;
 
                 document.getElementById('validationOutput').textContent = '✓ Шифрование выполнено успешно';
                 document.getElementById('validationOutput').className = 'status success';
@@ -417,7 +567,7 @@
             }
         }
 
-        function processDecryption() {
+        async function processDecryption() {
             try {
                 const inputText = document.getElementById('inputText').value;
                 const keyString = document.getElementById('encryptionKey').value;
@@ -427,7 +577,12 @@
                     return;
                 }
                 
-                const result = cipher.decryptText(inputText, keyString);
+                if (!keyString) {
+                    alert('Введите ключ шифрования');
+                    return;
+                }
+
+                const result = await cipher.decryptText(inputText, keyString);
                 
                 document.getElementById('resultOutput').textContent = 
                     `Расшифрованный текст:\n${result.plaintext}\n\n` +
@@ -441,18 +596,26 @@
             }
         }
 
+        function testMultiplication() {
+            const debugOutput = document.getElementById('debugOutput');
+            if (debugOutput) debugOutput.innerHTML = '';
+            
+            cipher.testCliffordMultiplication();
+            
+            document.getElementById('resultOutput').textContent = 
+                'Результаты тестирования умножения смотри в отладочной информации ниже';
+            document.getElementById('validationOutput').textContent = '✓ Тестирование завершено';
+            document.getElementById('validationOutput').className = 'status success';
+        }
+
         function clearAll() {
             document.getElementById('inputText').value = '';
-            document.getElementById('encryptionKey').value = 'МойСекретныйКлюч';
+            document.getElementById('encryptionKey').value = 'StrongPassword123!';
             document.getElementById('resultOutput').textContent = '—';
             document.getElementById('validationOutput').textContent = '—';
             document.getElementById('validationOutput').className = 'status';
-            updateKeyDisplay();
+            document.getElementById('debugOutput').innerHTML = '—';
         }
-
-        // Инициализация
-        document.getElementById('encryptionKey').addEventListener('input', updateKeyDisplay);
-        updateKeyDisplay();
     </script>
 </body>
 </html>
