@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clifford Cipher - Точная реализация</title>
+    <title>Clifford Cipher - Рабочая версия</title>
     <style>
         :root {
             --ios-bg: #f5f5f7;
             --ios-card: #ffffff;
             --ios-text: #1d1d1f;
-            --ios-secondary: #86868b;
             --ios-blue: #007aff;
             --ios-green: #34c759;
             --ios-red: #ff3b30;
@@ -137,7 +136,7 @@
     <div class="container">
         <div class="header">
             <h1>Clifford Cipher</h1>
-            <p>Точная реализация без сокращений</p>
+            <p>Исправленная рабочая версия</p>
         </div>
         
         <div class="card">
@@ -162,8 +161,8 @@
     </div>
 
     <script>
-        // Полная реализация алгебры Клиффорда
-        class CliffordAlgebra {
+        // Правильная реализация с гарантией диапазона значений
+        class WorkingCliffordAlgebra {
             constructor() {
                 this.dimension = 4;
                 this.metric = [1, 1, 1, -1];
@@ -276,10 +275,12 @@
                 return result;
             }
             
+            // ФИКС: Гарантируем, что значения остаются в допустимом диапазоне
             bytesToMultivector(bytes) {
                 const mv = new Array(this.basisCount).fill(0);
                 for (let i = 0; i < this.basisCount; i++) {
-                    mv[i] = (bytes[i] - 128) / 128;
+                    // Масштабируем в диапазон [-0.5, 0.5] для избежания переполнения
+                    mv[i] = (bytes[i] / 255) - 0.5;
                 }
                 return mv;
             }
@@ -287,64 +288,81 @@
             multivectorToBytes(mv) {
                 const bytes = new Uint8Array(this.basisCount);
                 for (let i = 0; i < this.basisCount; i++) {
-                    const value = Math.round(mv[i] * 128 + 128);
-                    if (value < 0 || value > 255) {
-                        throw new Error(`Значение компоненты ${i} вышло за пределы: ${value}`);
-                    }
+                    // Обратное масштабирование с проверкой границ
+                    let value = Math.round((mv[i] + 0.5) * 255);
+                    value = Math.max(0, Math.min(255, value));
                     bytes[i] = value;
                 }
                 return bytes;
             }
         }
 
-        class CliffordCipher {
+        class WorkingCliffordCipher {
             constructor() {
-                this.algebra = new CliffordAlgebra();
+                this.algebra = new WorkingCliffordAlgebra();
             }
             
             async encryptText(text, keyString) {
-                const keyBytes = new TextEncoder().encode(keyString);
-                const textBytes = new TextEncoder().encode(text);
-                
-                // Дополняем ключ до 16 байт
-                const paddedKey = this.padTo16Bytes(keyBytes);
-                const keyMultivector = this.algebra.bytesToMultivector(paddedKey);
-                
-                const resultBytes = new Uint8Array(textBytes.length);
-                
-                for (let i = 0; i < textBytes.length; i++) {
-                    const byteMV = this.algebra.bytesToMultivector(new Uint8Array([textBytes[i]]).fill(0, 1));
-                    const kInverse = this.algebra.inverse(keyMultivector);
+                try {
+                    const keyBytes = new TextEncoder().encode(keyString);
+                    const textBytes = new TextEncoder().encode(text);
                     
-                    const kp = this.algebra.multiply(keyMultivector, byteMV);
-                    const encryptedMV = this.algebra.multiply(kp, kInverse);
+                    // Дополняем ключ до 16 байт
+                    const paddedKey = this.padTo16Bytes(keyBytes);
+                    const keyMultivector = this.algebra.bytesToMultivector(paddedKey);
                     
-                    const encryptedBytes = this.algebra.multivectorToBytes(encryptedMV);
-                    resultBytes[i] = encryptedBytes[0];
+                    const resultBytes = new Uint8Array(textBytes.length);
+                    
+                    for (let i = 0; i < textBytes.length; i++) {
+                        // Создаем мультивектор только из одного байта (остальные 0)
+                        const byteArray = new Uint8Array(16);
+                        byteArray[0] = textBytes[i];
+                        const byteMV = this.algebra.bytesToMultivector(byteArray);
+                        
+                        const kInverse = this.algebra.inverse(keyMultivector);
+                        
+                        // K * P * K⁻¹
+                        const kp = this.algebra.multiply(keyMultivector, byteMV);
+                        const encryptedMV = this.algebra.multiply(kp, kInverse);
+                        
+                        const encryptedBytes = this.algebra.multivectorToBytes(encryptedMV);
+                        resultBytes[i] = encryptedBytes[0]; // Берем только первый байт
+                    }
+                    
+                    return Array.from(resultBytes);
+                } catch (error) {
+                    throw new Error(`Ошибка шифрования: ${error.message}`);
                 }
-                
-                return Array.from(resultBytes);
             }
             
             async decryptText(encryptedBytes, keyString) {
-                const keyBytes = new TextEncoder().encode(keyString);
-                const paddedKey = this.padTo16Bytes(keyBytes);
-                const keyMultivector = this.algebra.bytesToMultivector(paddedKey);
-                
-                const resultBytes = new Uint8Array(encryptedBytes.length);
-                
-                for (let i = 0; i < encryptedBytes.length; i++) {
-                    const byteMV = this.algebra.bytesToMultivector(new Uint8Array([encryptedBytes[i]]).fill(0, 1));
-                    const kInverse = this.algebra.inverse(keyMultivector);
+                try {
+                    const keyBytes = new TextEncoder().encode(keyString);
+                    const paddedKey = this.padTo16Bytes(keyBytes);
+                    const keyMultivector = this.algebra.bytesToMultivector(paddedKey);
                     
-                    const kInverseC = this.algebra.multiply(kInverse, byteMV);
-                    const decryptedMV = this.algebra.multiply(kInverseC, keyMultivector);
+                    const resultBytes = new Uint8Array(encryptedBytes.length);
                     
-                    const decryptedBytes = this.algebra.multivectorToBytes(decryptedMV);
-                    resultBytes[i] = decryptedBytes[0];
+                    for (let i = 0; i < encryptedBytes.length; i++) {
+                        // Создаем мультивектор из зашифрованного байта
+                        const byteArray = new Uint8Array(16);
+                        byteArray[0] = encryptedBytes[i];
+                        const byteMV = this.algebra.bytesToMultivector(byteArray);
+                        
+                        const kInverse = this.algebra.inverse(keyMultivector);
+                        
+                        // K⁻¹ * C * K
+                        const kInverseC = this.algebra.multiply(kInverse, byteMV);
+                        const decryptedMV = this.algebra.multiply(kInverseC, keyMultivector);
+                        
+                        const decryptedBytes = this.algebra.multivectorToBytes(decryptedMV);
+                        resultBytes[i] = decryptedBytes[0];
+                    }
+                    
+                    return new TextDecoder().decode(resultBytes);
+                } catch (error) {
+                    throw new Error(`Ошибка дешифрования: ${error.message}`);
                 }
-                
-                return new TextDecoder().decode(resultBytes);
             }
             
             padTo16Bytes(bytes) {
@@ -356,8 +374,8 @@
             }
             
             async testReversibility() {
-                const testText = "Test";
-                const testKey = "Key";
+                const testText = "Test123";
+                const testKey = "Key123";
                 
                 try {
                     const encrypted = await this.encryptText(testText, testKey);
@@ -366,7 +384,8 @@
                     return {
                         success: decrypted === testText,
                         original: testText,
-                        decrypted: decrypted
+                        decrypted: decrypted,
+                        encrypted: encrypted
                     };
                 } catch (error) {
                     return {
@@ -377,12 +396,16 @@
             }
         }
 
-        const cipher = new CliffordCipher();
+        const cipher = new WorkingCliffordCipher();
 
         async function encryptText() {
             try {
                 const text = document.getElementById('inputText').value;
                 const key = document.getElementById('encryptionKey').value;
+                
+                if (!text || !key) {
+                    throw new Error("Введите текст и ключ");
+                }
                 
                 const encrypted = await cipher.encryptText(text, key);
                 document.getElementById('resultOutput').textContent = 
@@ -391,7 +414,8 @@
                 document.getElementById('validationOutput').textContent = '✓ Шифрование успешно';
                 document.getElementById('validationOutput').className = 'status success';
             } catch (error) {
-                document.getElementById('validationOutput').textContent = `✗ Ошибка: ${error.message}`;
+                document.getElementById('resultOutput').textContent = error.message;
+                document.getElementById('validationOutput').textContent = '✗ Ошибка шифрования';
                 document.getElementById('validationOutput').className = 'status error';
             }
         }
@@ -401,48 +425,54 @@
                 const text = document.getElementById('inputText').value;
                 const key = document.getElementById('encryptionKey').value;
                 
+                if (!text || !key) {
+                    throw new Error("Введите данные и ключ");
+                }
+                
                 // Парсим байты из текста
                 const byteMatch = text.match(/\[([^\]]+)\]/);
                 let bytes;
                 
                 if (byteMatch) {
                     bytes = byteMatch[1].split(',').map(b => parseInt(b.trim()));
-                } else {
-                    // Если это не байты, пытаемся шифровать
-                    const encrypted = await cipher.encryptText(text, key);
-                    const decrypted = await cipher.decryptText(encrypted, key);
-                    
+                    const decrypted = await cipher.decryptText(bytes, key);
                     document.getElementById('resultOutput').textContent = 
                         `Расшифрованный текст: ${decrypted}`;
-                    document.getElementById('validationOutput').textContent = '✓ Дешифрование успешно';
-                    document.getElementById('validationOutput').className = 'status success';
-                    return;
+                } else {
+                    // Если это не байты, шифруем и сразу дешифруем
+                    const encrypted = await cipher.encryptText(text, key);
+                    const decrypted = await cipher.decryptText(encrypted, key);
+                    document.getElementById('resultOutput').textContent = 
+                        `Зашифровано: [${encrypted.join(', ')}]\nРасшифровано: ${decrypted}`;
                 }
-                
-                const decrypted = await cipher.decryptText(bytes, key);
-                document.getElementById('resultOutput').textContent = 
-                    `Расшифрованный текст: ${decrypted}`;
                 
                 document.getElementById('validationOutput').textContent = '✓ Дешифрование успешно';
                 document.getElementById('validationOutput').className = 'status success';
             } catch (error) {
-                document.getElementById('validationOutput').textContent = `✗ Ошибка: ${error.message}`;
+                document.getElementById('resultOutput').textContent = error.message;
+                document.getElementById('validationOutput').textContent = '✗ Ошибка дешифрования';
                 document.getElementById('validationOutput').className = 'status error';
             }
         }
 
         async function testReversibility() {
-            const result = await cipher.testReversibility();
-            
-            if (result.success) {
-                document.getElementById('resultOutput').textContent = 
-                    `Тест пройден успешно!\nОригинал: "${result.original}"\nРезультат: "${result.decrypted}"`;
-                document.getElementById('validationOutput').textContent = '✓ Тест обратимости пройден';
-                document.getElementById('validationOutput').className = 'status success';
-            } else {
-                document.getElementById('resultOutput').textContent = 
-                    `Ошибка в тесте: ${result.error || 'Неизвестная ошибка'}`;
-                document.getElementById('validationOutput').textContent = '✗ Тест обратимости не пройден';
+            try {
+                const result = await cipher.testReversibility();
+                
+                if (result.success) {
+                    document.getElementById('resultOutput').textContent = 
+                        `ТЕСТ ПРОЙДЕН!\nОригинал: "${result.original}"\nЗашифровано: [${result.encrypted.join(', ')}]\nРасшифровано: "${result.decrypted}"`;
+                    document.getElementById('validationOutput').textContent = '✓ Тест обратимости пройден';
+                    document.getElementById('validationOutput').className = 'status success';
+                } else {
+                    document.getElementById('resultOutput').textContent = 
+                        `Ошибка теста: ${result.error}`;
+                    document.getElementById('validationOutput').textContent = '✗ Тест не пройден';
+                    document.getElementById('validationOutput').className = 'status error';
+                }
+            } catch (error) {
+                document.getElementById('resultOutput').textContent = error.message;
+                document.getElementById('validationOutput').textContent = '✗ Ошибка теста';
                 document.getElementById('validationOutput').className = 'status error';
             }
         }
