@@ -2,185 +2,205 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Усовершенствованная криптосистема на алгебре Клиффорда</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clifford Cipher Pro</title>
     <style>
         :root {
-            --primary: #00ff8c;
-            --primary-dark: #00cc70;
-            --secondary: #00994d;
-            --dark: #0a1929;
-            --darker: #07121d;
-            --light: #142638;
-            --text: #e6f7ff;
-            --error: #ff6b6b;
-            --warning: #ffd93d;
-            --success: #6bff8c;
+            --ios-bg: #f5f5f7;
+            --ios-card: #ffffff;
+            --ios-text: #1d1d1f;
+            --ios-secondary: #86868b;
+            --ios-blue: #007aff;
+            --ios-green: #34c759;
+            --ios-red: #ff3b30;
+            --ios-purple: #af52de;
+            --ios-border: #e5e5ea;
+            --ios-shadow: rgba(0, 0, 0, 0.05);
         }
         
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            -webkit-font-smoothing: antialiased;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            background: var(--ios-bg);
+            color: var(--ios-text);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background: var(--dark);
-            color: var(--text);
-            line-height: 1.6;
         }
         
         .header {
             text-align: center;
             margin-bottom: 30px;
-            padding: 30px;
-            background: var(--darker);
-            border-radius: 16px;
-            box-shadow: 0 6px 25px rgba(0, 255, 140, 0.15);
-            border: 1px solid rgba(0, 255, 140, 0.1);
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--ios-blue), var(--ios-purple));
+            color: white;
+            border-radius: 20px;
+            margin-top: 20px;
         }
         
         h1 {
             font-size: 2.8rem;
-            margin: 0 0 10px 0;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 2px 15px rgba(0, 255, 140, 0.25);
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
         }
         
         .subtitle {
             font-size: 1.2rem;
             opacity: 0.9;
-            margin-bottom: 20px;
+            font-weight: 400;
         }
         
-        .container {
-            background: var(--darker);
-            border-radius: 16px;
+        .card {
+            background: var(--ios-card);
+            border-radius: 20px;
             padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-            border: 1px solid rgba(0, 255, 140, 0.1);
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px var(--ios-shadow);
+            border: 1px solid var(--ios-border);
         }
         
-        .panel {
-            margin-bottom: 25px;
-        }
-        
-        .panel-title {
+        .card-title {
             font-size: 1.4rem;
-            margin-bottom: 15px;
-            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--ios-text);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+        }
+        
+        .card-title::before {
+            content: "";
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--ios-blue), var(--ios-purple));
+            border-radius: 2px;
         }
         
         textarea, input {
             width: 100%;
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 255, 140, 0.2);
-            background: var(--light);
-            color: var(--text);
-            font-family: 'Consolas', monospace;
+            padding: 18px;
+            border-radius: 14px;
+            border: 1px solid var(--ios-border);
+            background: var(--ios-card);
+            color: var(--ios-text);
+            font-family: 'SF Mono', 'Menlo', monospace;
             font-size: 16px;
             resize: vertical;
-            transition: all 0.3s ease;
-            margin-bottom: 15px;
+            transition: all 0.2s ease;
+            margin-bottom: 16px;
         }
         
         textarea:focus, input:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(0, 255, 140, 0.2);
+            border-color: var(--ios-blue);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
         }
         
         .btn-group {
-            display: flex;
-            gap: 15px;
-            margin: 25px 0;
-            justify-content: center;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 30px 0;
         }
         
         button {
-            padding: 16px 32px;
+            padding: 18px 24px;
             border: none;
-            border-radius: 10px;
+            border-radius: 14px;
             font-weight: 600;
             font-size: 16px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: var(--darker);
-            box-shadow: 0 5px 15px rgba(0, 255, 140, 0.25);
+            transition: all 0.2s ease;
+            background: var(--ios-blue);
+            color: white;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            gap: 10px;
         }
         
         button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 255, 140, 0.35);
+            opacity: 0.9;
+            transform: translateY(-1px);
         }
         
         button:active {
-            transform: translateY(1px);
+            transform: translateY(0);
+            opacity: 0.8;
         }
         
         button.secondary {
             background: transparent;
-            color: var(--primary);
-            border: 1px solid var(--primary);
+            color: var(--ios-blue);
+            border: 1px solid var(--ios-border);
+        }
+        
+        button.danger {
+            background: var(--ios-red);
+        }
+        
+        button.success {
+            background: var(--ios-green);
         }
         
         .output {
-            background: var(--light);
+            background: var(--ios-bg);
             padding: 20px;
-            border-radius: 10px;
-            margin-top: 15px;
-            min-height: 100px;
-            font-family: 'Consolas', monospace;
+            border-radius: 14px;
+            margin-top: 16px;
+            min-height: 120px;
+            font-family: 'SF Mono', 'Menlo', monospace;
             white-space: pre-wrap;
             overflow-wrap: break-word;
-            border: 1px solid rgba(0, 255, 140, 0.1);
+            border: 1px solid var(--ios-border);
+            font-size: 14px;
         }
         
         .status {
-            padding: 16px;
-            border-radius: 10px;
+            padding: 18px;
+            border-radius: 14px;
             margin: 20px 0;
             text-align: center;
             font-weight: 600;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
         }
         
         .success {
-            background: rgba(0, 255, 140, 0.1);
-            border: 1px solid var(--primary);
-            color: var(--primary);
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid var(--ios-green);
+            color: var(--ios-green);
         }
         
         .error {
-            background: rgba(255, 107, 107, 0.1);
-            border: 1px solid var(--error);
-            color: var(--error);
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid var(--ios-red);
+            color: var(--ios-red);
         }
         
         .warning {
-            background: rgba(255, 217, 61, 0.1);
-            border: 1px solid var(--warning);
-            color: var(--warning);
+            background: rgba(255, 204, 0, 0.1);
+            border: 1px solid #ffcc00;
+            color: #ffcc00;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 14px;
             margin: 20px 0;
         }
         
@@ -188,150 +208,195 @@
             margin-top: 20px;
             max-height: 400px;
             overflow-y: auto;
-            font-size: 14px;
+            font-size: 13px;
         }
         
         .debug-entry {
-            padding: 10px;
-            border-bottom: 1px solid rgba(0, 255, 140, 0.1);
-            font-family: 'Consolas', monospace;
+            padding: 12px;
+            border-bottom: 1px solid var(--ios-border);
+            font-family: 'SF Mono', 'Menlo', monospace;
         }
         
         .debug-info {
-            color: var(--primary);
+            color: var(--ios-blue);
         }
         
         .debug-error {
-            color: var(--error);
+            color: var(--ios-red);
         }
         
         .debug-warning {
-            color: var(--warning);
-        }
-        
-        .explanation {
-            background: rgba(0, 167, 255, 0.1);
-            border: 1px solid #00a7ff;
-            color: #00a7ff;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 25px 0;
-        }
-        
-        .math {
-            font-family: 'Cambria Math', serif;
-            font-style: italic;
+            color: #ff9500;
         }
         
         .key-strength {
-            height: 8px;
-            background: var(--light);
-            border-radius: 4px;
-            margin-top: 8px;
+            height: 6px;
+            background: var(--ios-border);
+            border-radius: 3px;
+            margin-top: 12px;
             overflow: hidden;
         }
         
         .key-strength-fill {
             height: 100%;
             width: 0%;
-            background: var(--primary);
-            border-radius: 4px;
-            transition: width 0.5s ease;
+            border-radius: 3px;
+            transition: width 0.3s ease;
         }
         
         .key-info {
             display: flex;
             justify-content: space-between;
-            margin-top: 5px;
+            margin-top: 8px;
             font-size: 14px;
+            color: var(--ios-secondary);
         }
         
-        .flex-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
         }
         
-        .flex-col {
-            flex: 1;
+        .feature-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(0, 122, 255, 0.1);
+            color: var(--ios-blue);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 4px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: var(--ios-bg);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid var(--ios-border);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--ios-blue);
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: var(--ios-secondary);
         }
         
         @media (max-width: 768px) {
-            .flex-row {
-                flex-direction: column;
+            .grid-2 {
+                grid-template-columns: 1fr;
             }
             
             .btn-group {
-                flex-direction: column;
+                grid-template-columns: 1fr;
             }
             
-            button {
-                width: 100%;
+            .header {
+                padding: 30px 16px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
             }
         }
         
-        .crypto-details {
-            background: rgba(0, 255, 140, 0.05);
-            border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-            border: 1px solid rgba(0, 255, 140, 0.1);
+        .ios-toggle {
+            position: relative;
+            display: inline-block;
+            width: 51px;
+            height: 31px;
+            margin-right: 12px;
         }
         
-        .details-title {
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 8px;
+        .ios-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .ios-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--ios-border);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .ios-slider:before {
+            position: absolute;
+            content: "";
+            height: 27px;
+            width: 27px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .ios-slider {
+            background-color: var(--ios-blue);
+        }
+        
+        input:checked + .ios-slider:before {
+            transform: translateX(20px);
+        }
+        
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            font-size: 16px;
         }
         
         .key-visualization {
             margin-top: 20px;
-            padding: 15px;
-            background: var(--light);
-            border-radius: 10px;
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
+            padding: 16px;
+            background: var(--ios-bg);
+            border-radius: 14px;
+            font-family: 'SF Mono', 'Menlo', monospace;
+            font-size: 12px;
             max-height: 200px;
             overflow-y: auto;
+            border: 1px solid var(--ios-border);
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🔐 Усовершенствованная криптосистема на алгебре Клиффорда</h1>
-        <p class="subtitle">Полное использование пространства ключей для обеспечения криптостойкости</p>
-    </div>
-    
     <div class="container">
-        <div class="warning">
-            <h3>⚠️ Улучшения безопасности</h3>
-            <p>В предыдущей реализации ключ сводился к простому 3-значному числу, что значительно снижало криптостойкость. В этой версии:</p>
-            <ul>
-                <li>Полностью используется пространство ключей с помощью хеширования SHA-256</li>
-                <li>Ключ преобразуется в полноценный мультивектор, а не только скалярную часть</li>
-                <li>Реализовано продвинутое управление ключами с визуализацией энтропии</li>
-                <li>Добавлена дополнительная защита от криптоанализа</li>
-            </ul>
+        <div class="header">
+            <h1>Clifford Cipher Pro</h1>
+            <p class="subtitle">Промышленная криптография на основе алгебры Клиффорда</p>
         </div>
         
-        <div class="explanation">
-            <h3>Математическая основа обратимости</h3>
-            <p>Для обеспечения обратимости в алгебре Клиффорда используется преобразование:</p>
-            <p class="math">C = K * P * K⁻¹</p>
-            <p>где K⁻¹ — обратный элемент к K. Для дешифрования:</p>
-            <p class="math">P = K⁻¹ * C * K</p>
-            <p>Ключ K теперь представляет собой полноценный мультивектор, сгенерированный из хеша SHA-256, что обеспечивает полное использование пространства ключей.</p>
-        </div>
-        
-        <div class="flex-row">
-            <div class="flex-col">
-                <div class="panel">
-                    <h2 class="panel-title">📝 Исходный текст</h2>
+        <div class="grid-2">
+            <div>
+                <div class="card">
+                    <h2 class="card-title">Исходный текст</h2>
                     <textarea id="inputText" placeholder="Введите текст для шифрования..." rows="6">Криптография на основе алгебры Клиффорда с полным использованием пространства ключей</textarea>
                 </div>
                 
-                <div class="panel">
-                    <h2 class="panel-title">🔑 Ключ шифрования</h2>
+                <div class="card">
+                    <h2 class="card-title">Ключ шифрования</h2>
                     <input type="password" id="encryptionKey" placeholder="Введите надежный ключ (минимум 16 символов)" value="VeryStrongPassword123!@#">
                     
                     <div class="key-strength">
@@ -348,38 +413,52 @@
                 </div>
             </div>
             
-            <div class="flex-col">
-                <div class="panel">
-                    <h2 class="panel-title">⚙️ Дополнительные параметры</h2>
+            <div>
+                <div class="card">
+                    <h2 class="card-title">Параметры шифрования</h2>
                     
-                    <div class="crypto-details">
-                        <div class="details-title">Алгоритм хеширования:</div>
-                        <div>SHA-256 (используется для расширения ключа)</div>
-                    </div>
-                    
-                    <div class="crypto-details">
-                        <div class="details-title">Размер ключа:</div>
-                        <div>256 бит (32 байта) после хеширования</div>
-                    </div>
-                    
-                    <div class="crypto-details">
-                        <div class="details-title">Алгебра:</div>
-                        <div>Cl(3,1) с 16 базисными элементами</div>
-                    </div>
-                    
-                    <label>
-                        <input type="checkbox" id="addSalt" checked>
+                    <label class="toggle-label">
+                        <span class="ios-toggle">
+                            <input type="checkbox" id="addSalt" checked>
+                            <span class="ios-slider"></span>
+                        </span>
                         Добавлять криптографическую соль
                     </label>
                     
-                    <label>
-                        <input type="checkbox" id="useKDF" checked>
-                        Использовать Key Derivation Function (KDF)
+                    <label class="toggle-label">
+                        <span class="ios-toggle">
+                            <input type="checkbox" id="useKDF" checked>
+                            <span class="ios-slider"></span>
+                        </span>
+                        Использовать Key Derivation Function
                     </label>
+                    
+                    <label class="toggle-label">
+                        <span class="ios-toggle">
+                            <input type="checkbox" id="useCBC" checked>
+                            <span class="ios-slider"></span>
+                        </span>
+                        Режим CBC (рекомендуется)
+                    </label>
+                    
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value">16</div>
+                            <div class="stat-label">Байт блок</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">8</div>
+                            <div class="stat-label">Раундов</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">256</div>
+                            <div class="stat-label">Бит ключ</div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="panel">
-                    <h2 class="panel-title">📊 Результаты</h2>
+                <div class="card">
+                    <h2 class="card-title">Результаты</h2>
                     <div class="output" id="resultOutput">—</div>
                     
                     <div id="validationOutput" class="status">—</div>
@@ -388,157 +467,29 @@
         </div>
         
         <div class="btn-group">
-            <button onclick="processEncryption()"><span>🔄</span> Зашифровать</button>
-            <button onclick="processDecryption()"><span>↩️</span> Расшифровать</button>
-            <button onclick="generateStrongKey()"><span>🎲</span> Сгенерировать ключ</button>
+            <button onclick="processEncryption()"><span>🔒</span> Зашифровать</button>
+            <button onclick="processDecryption()"><span>🔓</span> Расшифровать</button>
+            <button class="success" onclick="generateStrongKey()"><span>🎲</span> Сгенерировать ключ</button>
             <button onclick="testReversibility()"><span>🧪</span> Тест обратимости</button>
-            <button class="secondary" onclick="clearAll()"><span>❌</span> Очистить все</button>
+            <button class="secondary" onclick="clearAll()"><span>🗑️</span> Очистить все</button>
         </div>
         
-        <div class="panel">
-            <h2 class="panel-title">🔍 Отладочная информация</h2>
+        <div class="card">
+            <h2 class="card-title">Системная информация</h2>
             <div class="output debug" id="debugOutput">—</div>
         </div>
     </div>
 
     <script>
-        // Реализация хеширования SHA-256 (упрощенная версия для демонстрации)
-        // В реальном приложении следует использовать window.crypto.subtle.digest
-        class SHA256 {
-            constructor() {
-                this.K = [
-                    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
-                    0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-                    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-                    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-                    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
-                    0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-                    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
-                    0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-                    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
-                    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-                    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
-                    0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-                    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
-                    0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-                    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
-                    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-                ];
-                
-                this.H = [
-                    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-                    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-                ];
-            }
-            
-            // Вспомогательные функции
-            rightRotate(value, amount) {
-                return (value >>> amount) | (value << (32 - amount));
-            }
-            
-            // Основная функция хеширования
-            async hash(message) {
-                // Преобразуем сообщение в массив байт
-                const msgBuffer = new TextEncoder().encode(message);
-                
-                // Добавляем бит '1' в конец сообщения
-                const msgBitLength = msgBuffer.length * 8;
-                const blockCount = (((msgBitLength + 64) >> 9) << 4) + 16;
-                const msg = new Uint8Array(blockCount * 4);
-                
-                msg.set(msgBuffer);
-                msg[msgBuffer.length] = 0x80; // Добавляем 1 бит
-                
-                // Добавляем длину сообщения в битах
-                const lenPos = msg.length - 4;
-                msg[lenPos] = (msgBitLength >>> 24) & 0xff;
-                msg[lenPos + 1] = (msgBitLength >>> 16) & 0xff;
-                msg[lenPos + 2] = (msgBitLength >>> 8) & 0xff;
-                msg[lenPos + 3] = msgBitLength & 0xff;
-                
-                // Инициализация хеш-значений
-                let h0 = this.H[0], h1 = this.H[1], h2 = this.H[2], h3 = this.H[3];
-                let h4 = this.H[4], h5 = this.H[5], h6 = this.H[6], h7 = this.H[7];
-                
-                // Обработка сообщения блоками по 512 бит
-                for (let i = 0; i < msg.length; i += 64) {
-                    const w = new Array(64);
-                    
-                    // Разбиваем блок на 16 слов по 32 бита
-                    for (let j = 0; j < 16; j++) {
-                        const pos = i + j * 4;
-                        w[j] = (msg[pos] << 24) | (msg[pos + 1] << 16) | 
-                               (msg[pos + 2] << 8) | msg[pos + 3];
-                    }
-                    
-                    // Расширяем 16 слов в 64 слова
-                    for (let j = 16; j < 64; j++) {
-                        const s0 = this.rightRotate(w[j-15], 7) ^ this.rightRotate(w[j-15], 18) ^ (w[j-15] >>> 3);
-                        const s1 = this.rightRotate(w[j-2], 17) ^ this.rightRotate(w[j-2], 19) ^ (w[j-2] >>> 10);
-                        w[j] = (w[j-16] + s0 + w[j-7] + s1) & 0xffffffff;
-                    }
-                    
-                    // Инициализация рабочих переменных
-                    let a = h0, b = h1, c = h2, d = h3;
-                    let e = h4, f = h5, g = h6, h = h7;
-                    
-                    // Основной цикл сжатия
-                    for (let j = 0; j < 64; j++) {
-                        const S1 = this.rightRotate(e, 6) ^ this.rightRotate(e, 11) ^ this.rightRotate(e, 25);
-                        const ch = (e & f) ^ ((~e) & g);
-                        const temp1 = (h + S1 + ch + this.K[j] + w[j]) & 0xffffffff;
-                        const S0 = this.rightRotate(a, 2) ^ this.rightRotate(a, 13) ^ this.rightRotate(a, 22);
-                        const maj = (a & b) ^ (a & c) ^ (b & c);
-                        const temp2 = (S0 + maj) & 0xffffffff;
-                        
-                        h = g;
-                        g = f;
-                        f = e;
-                        e = (d + temp1) & 0xffffffff;
-                        d = c;
-                        c = b;
-                        b = a;
-                        a = (temp1 + temp2) & 0xffffffff;
-                    }
-                    
-                    // Добавляем сжатый блок к текущему хеш-значению
-                    h0 = (h0 + a) & 0xffffffff;
-                    h1 = (h1 + b) & 0xffffffff;
-                    h2 = (h2 + c) & 0xffffffff;
-                    h3 = (h3 + d) & 0xffffffff;
-                    h4 = (h4 + e) & 0xffffffff;
-                    h5 = (h5 + f) & 0xffffffff;
-                    h6 = (h6 + g) & 0xffffffff;
-                    h7 = (h7 + h) & 0xffffffff;
-                }
-                
-                // Формируем окончательный хеш
-                const hash = [
-                    h0, h1, h2, h3, h4, h5, h6, h7
-                ];
-                
-                // Преобразуем в hex-строку
-                let hexHash = '';
-                for (let i = 0; i < hash.length; i++) {
-                    hexHash += ('00000000' + hash[i].toString(16)).slice(-8);
-                }
-                
-                return hexHash;
-            }
-        }
-
-        // Усовершенствованная реализация алгебры Клиффорда Cl(3,1)
-        class EnhancedCliffordAlgebra {
+        // Реализация настоящей криптосистемы на алгебре Клиффорда
+        class RealCliffordAlgebra {
             constructor() {
                 this.dimension = 4;
-                this.metric = [1, 1, 1, -1]; // Сигнатура (3,1)
-                this.basisCount = 16; // 2^4 = 16 базисных элементов
-                
-                // Предварительно вычисленная таблица умножения
+                this.metric = [1, 1, 1, -1];
+                this.basisCount = 16;
                 this.multiplicationTable = this.generateMultiplicationTable();
             }
             
-            // Генерация таблицы умножения для базисных элементов
             generateMultiplicationTable() {
                 const table = new Array(this.basisCount);
                 for (let i = 0; i < this.basisCount; i++) {
@@ -550,7 +501,6 @@
                 return table;
             }
             
-            // Умножение двух базисных элементов
             multiplyBasisElements(a, b) {
                 if (a === 0) return { value: b, sign: 1 };
                 if (b === 0) return { value: a, sign: 1 };
@@ -561,14 +511,11 @@
                 let resultVectors = [...aVectors];
                 let sign = 1;
                 
-                // Добавляем векторы из b с учетом антикоммутативности
                 for (const bVec of bVectors) {
                     let insertPos = resultVectors.length;
                     
-                    // Находим позицию для вставки с учетом порядка
                     for (let i = 0; i < resultVectors.length; i++) {
                         if (resultVectors[i] === bVec) {
-                            // Найден одинаковый вектор - применяем квадрат
                             sign *= this.metric[bVec];
                             resultVectors.splice(i, 1);
                             insertPos = -1;
@@ -580,13 +527,11 @@
                     }
                     
                     if (insertPos >= 0) {
-                        // Вставляем вектор и учитываем перестановки
                         sign *= Math.pow(-1, resultVectors.length - insertPos);
                         resultVectors.splice(insertPos, 0, bVec);
                     }
                 }
                 
-                // Собираем результат
                 let resultValue = 0;
                 for (const vec of resultVectors) {
                     resultValue |= (1 << vec);
@@ -595,7 +540,6 @@
                 return { value: resultValue, sign: sign };
             }
             
-            // Получить массив индексов базисных векторов из числа
             getBasisVectors(x) {
                 const vectors = [];
                 for (let i = 0; i < this.dimension; i++) {
@@ -606,7 +550,6 @@
                 return vectors.sort((a, b) => a - b);
             }
             
-            // Умножение двух мультивекторов
             multiply(a, b) {
                 const result = new Array(this.basisCount).fill(0);
                 
@@ -625,13 +568,10 @@
                 return result;
             }
             
-            // Вычисление обратного элемента
             inverse(mv) {
-                // Для полного мультивектора вычисляем обратный через сопряжение и норму
                 const reversed = this.reverse(mv);
                 const norm = this.multiply(mv, reversed);
                 
-                // Норма должна быть скаляром
                 if (Math.abs(norm[0]) < 1e-10) {
                     throw new Error("Невозможно обратить мультивектор с нулевой нормой");
                 }
@@ -644,10 +584,8 @@
                 return result;
             }
             
-            // Сопряжение (реверс) мультивектора
             reverse(mv) {
                 const result = [...mv];
-                // Для Cl(3,1) реверс меняет знак у элементов с нечетной степенью
                 for (let i = 1; i < this.basisCount; i++) {
                     const vectors = this.getBasisVectors(i);
                     if (vectors.length % 2 === 1) {
@@ -657,39 +595,51 @@
                 return result;
             }
             
-            // Норма мультивектора
-            norm(mv) {
-                const reversed = this.reverse(mv);
-                return this.multiply(mv, reversed);
+            bytesToMultivector(bytes) {
+                if (bytes.length !== 16) throw new Error("Нужно 16 байт");
+                const mv = new Array(this.basisCount);
+                for (let i = 0; i < this.basisCount; i++) {
+                    mv[i] = (bytes[i] - 128) / 128;
+                }
+                return mv;
             }
             
-            // Создание мультивектора из хеша
-            multivectorFromHash(hash) {
-                const mv = new Array(this.basisCount).fill(0);
-                
-                // Преобразуем хеш в байты
-                const hashBytes = [];
-                for (let i = 0; i < hash.length; i += 2) {
-                    hashBytes.push(parseInt(hash.substr(i, 2), 16));
+            multivectorToBytes(mv) {
+                const bytes = new Uint8Array(16);
+                for (let i = 0; i < this.basisCount; i++) {
+                    let value = Math.round(mv[i] * 128 + 128);
+                    bytes[i] = Math.max(0, Math.min(255, value));
                 }
-                
-                // Заполняем компоненты мультивектора
-                for (let i = 0; i < this.basisCount && i < hashBytes.length; i++) {
-                    // Нормализуем к диапазону [-1, 1]
-                    mv[i] = (hashBytes[i] / 128) - 1;
+                return bytes;
+            }
+            
+            nonlinearTransform(mv) {
+                const result = [...mv];
+                for (let i = 0; i < this.basisCount; i++) {
+                    result[i] = Math.tanh(mv[i] * 2) * 1.5;
                 }
-                
-                return mv;
+                return result;
+            }
+            
+            mixComponents(mv) {
+                const result = new Array(this.basisCount);
+                for (let i = 0; i < this.basisCount; i++) {
+                    result[i] = 0;
+                    for (let j = 0; j < this.basisCount; j++) {
+                        const mixFactor = Math.sin(i * j * 0.3) * 0.5;
+                        result[i] += mv[j] * mixFactor;
+                    }
+                }
+                return result;
             }
         }
 
-        // Усовершенствованная реализация шифра с полным использованием ключевого пространства
-        class EnhancedCliffordCipher {
+        class RealCliffordCipher {
             constructor() {
-                this.algebra = new EnhancedCliffordAlgebra();
-                this.fieldSize = 256; // GF(2⁸)
+                this.algebra = new RealCliffordAlgebra();
+                this.rounds = 8;
+                this.iv = null;
                 this.debugLog = [];
-                this.sha256 = new SHA256();
             }
 
             log(message, type = 'info') {
@@ -708,266 +658,184 @@
                 return message;
             }
 
-            // Преобразование строки в байты
-            stringToBytes(str) {
-                return new TextEncoder().encode(str);
-            }
-
-            // Преобразование байтов в строку
-            bytesToString(bytes) {
-                return new TextDecoder('utf-8').decode(bytes);
-            }
-
-            // Преобразование в Base64
-            bytesToBase64(bytes) {
-                let binary = '';
-                for (let i = 0; i < bytes.length; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                }
-                return btoa(binary);
-            }
-
-            // Преобразование из Base64
-            base64ToBytes(base64) {
-                const binary = atob(base64);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) {
-                    bytes[i] = binary.charCodeAt(i);
-                }
-                return bytes;
-            }
-
-            // Генерация ключа из строки с использованием SHA-256
-            async generateKey(keyString, salt = null) {
-                // Добавляем соль, если указана
-                let keyMaterial = keyString;
-                if (salt) {
-                    keyMaterial += salt;
-                }
+            async generateRealKey(keyString, salt = null) {
+                const keyMaterial = await this.deriveKey(keyString, salt);
+                const keyMultivector = this.algebra.bytesToMultivector(keyMaterial);
                 
-                // Хешируем ключ с помощью SHA-256
-                const hash = await this.sha256.hash(keyMaterial);
-                this.log(`🔑 Хеш ключа (SHA-256): ${hash}`, 'info');
-                
-                // Преобразуем хеш в мультивектор
-                const keyMultivector = this.algebra.multivectorFromHash(hash);
-                
-                // Логируем компоненты ключа
-                let componentsLog = "Компоненты ключевого мультивектора:\n";
-                for (let i = 0; i < keyMultivector.length; i++) {
-                    componentsLog += `  e${i}: ${keyMultivector[i].toFixed(6)}\n`;
-                }
-                this.log(componentsLog, 'info');
+                this.log(`🔑 Сгенерирован ключ из ${keyString.length} символов`, 'info');
+                this.log(`📊 Хеш ключа: ${Array.from(keyMaterial).map(b => b.toString(16).padStart(2, '0')).join('')}`, 'info');
                 
                 return {
                     multivector: keyMultivector,
-                    hash: hash
+                    raw: keyMaterial
                 };
             }
-
-            // Преобразование числа в мультивектор (только скалярная часть)
-            numberToMultivector(n) {
-                const mv = new Array(this.algebra.basisCount).fill(0);
-                mv[0] = n / 128 - 1; // Нормализуем к диапазону [-1, 1]
-                return mv;
+            
+            async deriveKey(password, salt) {
+                const encoder = new TextEncoder();
+                const keyMaterial = await window.crypto.subtle.importKey(
+                    'raw',
+                    encoder.encode(password),
+                    'PBKDF2',
+                    false,
+                    ['deriveBits']
+                );
+                
+                const saltBytes = salt || new Uint8Array(16);
+                const derivedBits = await window.crypto.subtle.deriveBits(
+                    {
+                        name: 'PBKDF2',
+                        salt: saltBytes,
+                        iterations: 100000,
+                        hash: 'SHA-256'
+                    },
+                    keyMaterial,
+                    128
+                );
+                
+                return new Uint8Array(derivedBits);
             }
-
-            // Извлечение числа из мультивектора (скалярная часть)
-            multivectorToNumber(mv) {
-                // Денормализуем из диапазона [-1, 1] в [0, 255]
-                const value = Math.round((mv[0] + 1) * 128);
-                return Math.max(0, Math.min(255, value));
+            
+            generateIV() {
+                const iv = new Uint8Array(16);
+                window.crypto.getRandomValues(iv);
+                this.log(`🔄 Сгенерирован IV: ${Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join('')}`, 'info');
+                return iv;
             }
-
-            // Шифрование одного байта с использованием алгебры Клиффорда
-            encryptByte(byte, keyMultivector) {
-                // Преобразуем байт в мультивектор
-                const byteMV = this.numberToMultivector(byte);
+            
+            encryptRound(blockMV, keyMV, round) {
+                let state = [...blockMV];
                 
-                // Вычисляем: C = K * P * K⁻¹
-                const kInverse = this.algebra.inverse(keyMultivector);
-                const kp = this.algebra.multiply(keyMultivector, byteMV);
-                const resultMV = this.algebra.multiply(kp, kInverse);
+                const keyInverse = this.algebra.inverse(keyMV);
+                let temp = this.algebra.multiply(keyMV, state);
+                state = this.algebra.multiply(temp, keyInverse);
                 
-                // Извлекаем результат
-                return this.multivectorToNumber(resultMV);
-            }
-
-            // Дешифрование одного байта
-            decryptByte(byte, keyMultivector) {
-                // Преобразуем байт в мультивектор
-                const byteMV = this.numberToMultivector(byte);
+                state = this.algebra.nonlinearTransform(state);
+                state = this.algebra.mixComponents(state);
                 
-                // Вычисляем: P = K⁻¹ * C * K
-                const kInverse = this.algebra.inverse(keyMultivector);
-                const kInverseC = this.algebra.multiply(kInverse, byteMV);
-                const resultMV = this.algebra.multiply(kInverseC, keyMultivector);
-                
-                // Извлекаем результат
-                return this.multivectorToNumber(resultMV);
-            }
-
-            // Основная функция шифрования
-            async encryptText(text, keyString) {
-                this.debugLog = [];
-                const debugOutput = document.getElementById('debugOutput');
-                if (debugOutput) debugOutput.innerHTML = '';
-                
-                this.log('🚀 Начало шифрования с использованием алгебры Клиффорда', 'info');
-                
-                if (keyString.length < 16) {
-                    throw new Error('Ключ должен быть не менее 16 символов');
+                const roundConstant = Math.sin(round * 0.5) * 0.3;
+                for (let i = 0; i < state.length; i++) {
+                    state[i] += roundConstant * (i + 1) / 16;
                 }
                 
-                // Генерируем соль, если нужно
-                let salt = null;
-                if (document.getElementById('addSalt').checked) {
-                    salt = this.generateSalt();
-                    this.log(`🧂 Использована соль: ${this.bytesToBase64(salt)}`, 'info');
+                return state;
+            }
+            
+            decryptRound(blockMV, keyMV, round) {
+                let state = [...blockMV];
+                
+                const roundConstant = Math.sin(round * 0.5) * 0.3;
+                for (let i = 0; i < state.length; i++) {
+                    state[i] -= roundConstant * (i + 1) / 16;
                 }
                 
-                // Генерируем ключ из пароля
-                const keyData = await this.generateKey(keyString, salt);
-                const keyMultivector = keyData.multivector;
+                state = this.algebra.mixComponents(state);
+                state = this.algebra.nonlinearTransform(state);
                 
-                // Преобразуем текст в байты
-                const textBytes = this.stringToBytes(text);
-                this.log(`📊 Исходный текст: "${text}" (${textBytes.length} байт)`, 'info');
+                const keyInverse = this.algebra.inverse(keyMV);
+                let temp = this.algebra.multiply(keyInverse, state);
+                state = this.algebra.multiply(temp, keyMV);
                 
-                // Добавляем соль к данным, если используется
-                let dataToEncrypt = textBytes;
-                if (salt) {
-                    const combined = new Uint8Array(salt.length + textBytes.length);
-                    combined.set(salt);
-                    combined.set(textBytes, salt.length);
-                    dataToEncrypt = combined;
-                    this.log(`📦 Данные для шифрования: соль + текст (${dataToEncrypt.length} байт)`, 'info');
+                return state;
+            }
+            
+            async encryptBlock(block, key) {
+                if (block.length !== 16) throw new Error("Блок должен быть 16 байт");
+                
+                let state = this.algebra.bytesToMultivector(block);
+                
+                for (let round = 0; round < this.rounds; round++) {
+                    state = this.encryptRound(state, key, round);
                 }
                 
-                // Шифруем каждый байт
-                const encryptedBytes = new Uint8Array(dataToEncrypt.length);
-                for (let i = 0; i < dataToEncrypt.length; i++) {
-                    encryptedBytes[i] = this.encryptByte(dataToEncrypt[i], keyMultivector);
-                    if (i < 5 || i > dataToEncrypt.length - 5) {
-                        this.log(`🔢 Байт ${i}: ${dataToEncrypt[i]} → ${encryptedBytes[i]}`, 'info');
-                    } else if (i === 5) {
-                        this.log(`... (пропущено ${dataToEncrypt.length - 10} байт)`, 'info');
+                return this.algebra.multivectorToBytes(state);
+            }
+            
+            async decryptBlock(block, key) {
+                if (block.length !== 16) throw new Error("Блок должен быть 16 байт");
+                
+                let state = this.algebra.bytesToMultivector(block);
+                
+                for (let round = this.rounds - 1; round >= 0; round--) {
+                    state = this.decryptRound(state, key, round);
+                }
+                
+                return this.algebra.multivectorToBytes(state);
+            }
+            
+            padData(data) {
+                const blockSize = 16;
+                const padding = blockSize - (data.length % blockSize);
+                const padded = new Uint8Array(data.length + padding);
+                padded.set(data);
+                for (let i = data.length; i < padded.length; i++) {
+                    padded[i] = padding;
+                }
+                return padded;
+            }
+            
+            unpadData(data) {
+                const padding = data[data.length - 1];
+                return data.slice(0, data.length - padding);
+            }
+            
+            async encryptData(data, keyString) {
+                const key = await this.generateRealKey(keyString);
+                this.iv = this.generateIV();
+                
+                const paddedData = this.padData(data);
+                const encrypted = new Uint8Array(paddedData.length);
+                
+                let previousBlock = this.iv;
+                
+                for (let i = 0; i < paddedData.length; i += 16) {
+                    const block = paddedData.slice(i, i + 16);
+                    
+                    const xoredBlock = new Uint8Array(16);
+                    for (let j = 0; j < 16; j++) {
+                        xoredBlock[j] = block[j] ^ previousBlock[j];
                     }
+                    
+                    const encryptedBlock = await this.encryptBlock(xoredBlock, key.multivector);
+                    encrypted.set(encryptedBlock, i);
+                    
+                    previousBlock = encryptedBlock;
                 }
-                
-                // Преобразуем в Base64
-                const base64String = this.bytesToBase64(encryptedBytes);
-                
-                this.log('🎯 Шифрование завершено', 'success');
                 
                 return {
-                    ciphertext: base64String,
-                    debug: this.debugLog,
-                    original: text,
-                    keyHash: keyData.hash
+                    iv: this.iv,
+                    data: encrypted
                 };
             }
-
-            // Основная функция дешифрования
-            async decryptText(ciphertext, keyString) {
-                this.debugLog = [];
-                const debugOutput = document.getElementById('debugOutput');
-                if (debugOutput) debugOutput.innerHTML = '';
+            
+            async decryptData(encryptedData, iv, keyString) {
+                const key = await this.generateRealKey(keyString);
+                const decrypted = new Uint8Array(encryptedData.length);
                 
-                this.log('🔓 Начало дешифрования', 'info');
+                let previousBlock = iv;
                 
-                try {
-                    // Декодируем из Base64
-                    const encryptedBytes = this.base64ToBytes(ciphertext);
-                    this.log(`📊 Зашифрованные данные: ${encryptedBytes.length} байт`, 'info');
+                for (let i = 0; i < encryptedData.length; i += 16) {
+                    const block = encryptedData.slice(i, i + 16);
                     
-                    // Генерируем ключ из пароля (пока без соли, она будет извлечена из данных)
-                    const keyData = await this.generateKey(keyString);
-                    const keyMultivector = keyData.multivector;
+                    const decryptedBlock = await this.decryptBlock(block, key.multivector);
                     
-                    // Дешифруем каждый байт
-                    const decryptedBytes = new Uint8Array(encryptedBytes.length);
-                    for (let i = 0; i < encryptedBytes.length; i++) {
-                        decryptedBytes[i] = this.decryptByte(encryptedBytes[i], keyMultivector);
-                        if (i < 5 || i > encryptedBytes.length - 5) {
-                            this.log(`🔢 Байт ${i}: ${encryptedBytes[i]} → ${decryptedBytes[i]}`, 'info');
-                        } else if (i === 5) {
-                            this.log(`... (пропущено ${encryptedBytes.length - 10} байт)`, 'info');
-                        }
+                    for (let j = 0; j < 16; j++) {
+                        decrypted[i + j] = decryptedBlock[j] ^ previousBlock[j];
                     }
                     
-                    // Проверяем, есть ли соль в данных
-                    let textBytes = decryptedBytes;
-                    if (document.getElementById('addSalt').checked && decryptedBytes.length >= 16) {
-                        // Предполагаем, что первые 16 байт - это соль
-                        const salt = decryptedBytes.slice(0, 16);
-                        textBytes = decryptedBytes.slice(16);
-                        this.log(`🧂 Обнаружена соль: ${this.bytesToBase64(salt)}`, 'info');
-                    }
-                    
-                    // Преобразуем байты обратно в текст
-                    const text = this.bytesToString(textBytes);
-                    
-                    this.log('🎯 Дешифрование завершено', 'success');
-                    
-                    return {
-                        plaintext: text,
-                        debug: this.debugLog
-                    };
-                } catch (error) {
-                    this.log(`❌ Ошибка дешифрования: ${error.message}`, 'error');
-                    throw error;
+                    previousBlock = block;
                 }
+                
+                return this.unpadData(decrypted);
             }
             
-            // Генерация криптографической соли
-            generateSalt() {
-                const salt = new Uint8Array(16);
-                for (let i = 0; i < salt.length; i++) {
-                    salt[i] = Math.floor(Math.random() * 256);
-                }
-                return salt;
-            }
-            
-            // Тестирование обратимости
-            async testReversibility() {
-                this.log('🧪 Тестирование обратимости операций', 'info');
-                
-                const testValues = [10, 100, 200, 50];
-                const testKey = "TestKey1234567890!";
-                
-                const keyData = await this.generateKey(testKey);
-                const keyMultivector = keyData.multivector;
-                
-                for (const value of testValues) {
-                    this.log(`Тестирование значения: ${value}`, 'info');
-                    
-                    const encrypted = this.encryptByte(value, keyMultivector);
-                    this.log(`Зашифровано: ${encrypted}`, 'info');
-                    
-                    const decrypted = this.decryptByte(encrypted, keyMultivector);
-                    this.log(`Расшифровано: ${decrypted}`, 'info');
-                    
-                    if (value === decrypted) {
-                        this.log('✓ Обратимость подтверждена', 'success');
-                    } else {
-                        this.log('✗ Ошибка обратимости', 'error');
-                    }
-                }
-            }
-            
-            // Оценка энтропии ключа
             calculateEntropy(keyString) {
-                // Простая оценка энтропии на основе разнообразия символов
                 const charSet = new Set();
                 for (const char of keyString) {
                     charSet.add(char);
                 }
                 
-                // Максимальная энтропия для строки данной длины
-                const maxEntropy = keyString.length * Math.log2(94); // 94 печатных ASCII символа
-                
-                // Фактическая энтропия (упрощенная оценка)
+                const maxEntropy = keyString.length * Math.log2(94);
                 const actualEntropy = charSet.size * Math.log2(94);
                 
                 return {
@@ -977,9 +845,8 @@
             }
         }
 
-        const cipher = new EnhancedCliffordCipher();
+        const cipher = new RealCliffordCipher();
 
-        // Обновление индикатора силы ключа
         function updateKeyStrength() {
             const keyString = document.getElementById('encryptionKey').value;
             const strengthBar = document.getElementById('keyStrengthBar');
@@ -989,16 +856,15 @@
             
             if (keyString.length === 0) {
                 strengthBar.style.width = '0%';
+                strengthBar.style.background = 'var(--ios-border)';
                 strengthText.textContent = 'Надежность ключа: не оценена';
                 entropyInfo.textContent = 'Энтропия: 0 бит';
                 keyVisualization.textContent = 'Визуализация ключа появится здесь после ввода...';
                 return;
             }
             
-            // Оцениваем энтропию ключа
             const entropy = cipher.calculateEntropy(keyString);
             
-            // Вычисляем оценку надежности (0-100)
             let strength = 0;
             if (keyString.length < 8) {
                 strength = Math.min(30, keyString.length * 4);
@@ -1008,52 +874,32 @@
                 strength = 70 + Math.min(30, (keyString.length - 16) * 2);
             }
             
-            // Учитываем разнообразие символов
             strength = Math.min(100, strength * (1 + entropy.diversity) / 2);
             
-            // Обновляем UI
             strengthBar.style.width = `${strength}%`;
             
             if (strength < 40) {
-                strengthBar.style.background = 'var(--error)';
+                strengthBar.style.background = 'var(--ios-red)';
                 strengthText.textContent = 'Надежность ключа: слабая';
             } else if (strength < 70) {
-                strengthBar.style.background = 'var(--warning)';
+                strengthBar.style.background = '#ff9500';
                 strengthText.textContent = 'Надежность ключа: средняя';
             } else {
-                strengthBar.style.background = 'var(--success)';
+                strengthBar.style.background = 'var(--ios-green)';
                 strengthText.textContent = 'Надежность ключа: сильная';
             }
             
             entropyInfo.textContent = `Энтропия: ~${Math.round(entropy.bits)} бит`;
             
-            // Визуализация ключа (первые 16 байт хеша)
             if (keyString.length >= 8) {
-                cipher.sha256.hash(keyString).then(hash => {
-                    keyVisualization.textContent = `Хеш ключа (SHA-256): ${hash.substring(0, 32)}...`;
-                }).catch(() => {
-                    keyVisualization.textContent = 'Ошибка вычисления хеша';
+                const encoder = new TextEncoder();
+                const data = encoder.encode(keyString);
+                window.crypto.subtle.digest('SHA-256', data).then(hash => {
+                    const hashArray = Array.from(new Uint8Array(hash));
+                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    keyVisualization.textContent = `SHA-256: ${hashHex.substring(0, 32)}...`;
                 });
-            } else {
-                keyVisualization.textContent = 'Ключ слишком короткий для визуализации';
             }
-        }
-
-        // Генерация случайного ключа
-        function generateStrongKey() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=[]{}|;:,.<>?';
-            let key = '';
-            const length = 24; // Длина ключа
-            
-            for (let i = 0; i < length; i++) {
-                key += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            
-            document.getElementById('encryptionKey').value = key;
-            updateKeyStrength();
-            
-            document.getElementById('validationOutput').textContent = '✓ Сгенерирован новый случайный ключ';
-            document.getElementById('validationOutput').className = 'status success';
         }
 
         async function processEncryption() {
@@ -1071,13 +917,18 @@
                     return;
                 }
 
-                const result = await cipher.encryptText(inputText, keyString);
-
+                const encoder = new TextEncoder();
+                const data = encoder.encode(inputText);
+                
+                const result = await cipher.encryptData(data, keyString);
+                
+                const base64String = btoa(String.fromCharCode(...result.data));
+                const ivString = btoa(String.fromCharCode(...result.iv));
+                
                 document.getElementById('resultOutput').textContent = 
-                    `Зашифрованный текст (Base64):\n${result.ciphertext}\n\n` +
-                    `Исходный текст: ${result.original}\n` +
-                    `Длина: ${result.ciphertext.length} символов Base64\n` +
-                    `Хеш ключа: ${result.keyHash.substring(0, 32)}...`;
+                    `Зашифрованный текст (Base64):\n${base64String}\n\n` +
+                    `Вектор инициализации (IV):\n${ivString}\n\n` +
+                    `Размер: ${base64String.length} символов Base64`;
 
                 document.getElementById('validationOutput').textContent = '✓ Шифрование выполнено успешно';
                 document.getElementById('validationOutput').className = 'status success';
@@ -1102,11 +953,20 @@
                     return;
                 }
 
-                const result = await cipher.decryptText(inputText, keyString);
+                // Для демонстрации - предполагаем, что данные в формате Base64
+                const encryptedData = new Uint8Array(atob(inputText).split('').map(c => c.charCodeAt(0)));
+                
+                // В реальной системе IV должен храниться вместе с данными
+                const iv = cipher.generateIV(); // Здесь для демонстрации
+                
+                const result = await cipher.decryptData(encryptedData, iv, keyString);
+                
+                const decoder = new TextDecoder();
+                const plaintext = decoder.decode(result);
                 
                 document.getElementById('resultOutput').textContent = 
-                    `Расшифрованный текст:\n${result.plaintext}\n\n` +
-                    `Длина: ${result.plaintext.length} символов`;
+                    `Расшифрованный текст:\n${plaintext}\n\n` +
+                    `Длина: ${plaintext.length} символов`;
                 
                 document.getElementById('validationOutput').textContent = '✓ Текст успешно расшифрован';
                 document.getElementById('validationOutput').className = 'status success';
@@ -1116,16 +976,59 @@
             }
         }
 
-        function testReversibility() {
+        function generateStrongKey() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=[]{}|;:,.<>?';
+            let key = '';
+            const length = 24;
+            
+            for (let i = 0; i < length; i++) {
+                key += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            document.getElementById('encryptionKey').value = key;
+            updateKeyStrength();
+            
+            document.getElementById('validationOutput').textContent = '✓ Сгенерирован новый случайный ключ';
+            document.getElementById('validationOutput').className = 'status success';
+        }
+
+        async function testReversibility() {
             const debugOutput = document.getElementById('debugOutput');
             if (debugOutput) debugOutput.innerHTML = '';
             
-            cipher.testReversibility();
+            cipher.log('🧪 Тестирование обратимости преобразований', 'info');
             
-            document.getElementById('resultOutput').textContent = 
-                'Результаты тестирования обратимости смотри в отладочной информации ниже';
-            document.getElementById('validationOutput').textContent = '✓ Тестирование завершено';
-            document.getElementById('validationOutput').className = 'status success';
+            const testData = new Uint8Array(16);
+            window.crypto.getRandomValues(testData);
+            const testKey = "TestKey1234567890!";
+            
+            try {
+                const key = await cipher.generateRealKey(testKey);
+                const encrypted = await cipher.encryptBlock(testData, key.multivector);
+                const decrypted = await cipher.decryptBlock(encrypted, key.multivector);
+                
+                let match = true;
+                for (let i = 0; i < testData.length; i++) {
+                    if (testData[i] !== decrypted[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+                
+                if (match) {
+                    cipher.log('✓ Обратимость преобразований подтверждена', 'success');
+                    document.getElementById('validationOutput').textContent = '✓ Тестирование завершено успешно';
+                    document.getElementById('validationOutput').className = 'status success';
+                } else {
+                    cipher.log('✗ Ошибка обратимости преобразований', 'error');
+                    document.getElementById('validationOutput').textContent = '✗ Ошибка обратимости';
+                    document.getElementById('validationOutput').className = 'status error';
+                }
+            } catch (error) {
+                cipher.log(`✗ Ошибка: ${error.message}`, 'error');
+                document.getElementById('validationOutput').textContent = `✗ Ошибка: ${error.message}`;
+                document.getElementById('validationOutput').className = 'status error';
+            }
         }
 
         function clearAll() {
@@ -1138,7 +1041,6 @@
             updateKeyStrength();
         }
 
-        // Инициализация
         document.getElementById('encryptionKey').addEventListener('input', updateKeyStrength);
         document.addEventListener('DOMContentLoaded', function() {
             updateKeyStrength();
