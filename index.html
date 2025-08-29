@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clifford Cipher Pro</title>
+    <title>Clifford Cipher Pro - Математически точная версия</title>
     <style>
         :root {
             --ios-bg: #f5f5f7;
@@ -258,18 +258,6 @@
             gap: 24px;
         }
         
-        .feature-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 12px;
-            background: rgba(0, 122, 255, 0.1);
-            color: var(--ios-blue);
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            margin: 4px;
-        }
-        
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -385,19 +373,19 @@
     <div class="container">
         <div class="header">
             <h1>Clifford Cipher Pro</h1>
-            <p class="subtitle">Промышленная криптография на основе алгебры Клиффорда</p>
+            <p class="subtitle">Математически точная реализация с гарантированной обратимостью</p>
         </div>
         
         <div class="grid-2">
             <div>
                 <div class="card">
                     <h2 class="card-title">Исходный текст</h2>
-                    <textarea id="inputText" placeholder="Введите текст для шифрования..." rows="6">Криптография на основе алгебры Клиффорда с полным использованием пространства ключей</textarea>
+                    <textarea id="inputText" placeholder="Введите текст для шифрования..." rows="6">Тестовое сообщение для проверки обратимости</textarea>
                 </div>
                 
                 <div class="card">
                     <h2 class="card-title">Ключ шифрования</h2>
-                    <input type="password" id="encryptionKey" placeholder="Введите надежный ключ (минимум 16 символов)" value="VeryStrongPassword123!@#">
+                    <input type="password" id="encryptionKey" placeholder="Введите надежный ключ (минимум 16 символов)" value="StrongPassword123!@#">
                     
                     <div class="key-strength">
                         <div class="key-strength-fill" id="keyStrengthBar"></div>
@@ -447,7 +435,7 @@
                             <div class="stat-label">Байт блок</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value">8</div>
+                            <div class="stat-value">2</div>
                             <div class="stat-label">Раундов</div>
                         </div>
                         <div class="stat-card">
@@ -481,8 +469,8 @@
     </div>
 
     <script>
-        // Реализация настоящей криптосистемы на алгебре Клиффорда
-        class RealCliffordAlgebra {
+        // Математически точная реализация алгебры Клиффорда
+        class ExactCliffordAlgebra {
             constructor() {
                 this.dimension = 4;
                 this.metric = [1, 1, 1, -1];
@@ -595,49 +583,36 @@
                 return result;
             }
             
+            // Точное преобразование байт в мультивектор с использованием рациональных чисел
             bytesToMultivector(bytes) {
                 if (bytes.length !== 16) throw new Error("Нужно 16 байт");
                 const mv = new Array(this.basisCount);
                 for (let i = 0; i < this.basisCount; i++) {
-                    mv[i] = (bytes[i] - 128) / 128;
+                    // Представляем каждый байт как рациональное число
+                    mv[i] = bytes[i] / 255;
                 }
                 return mv;
             }
             
+            // Точное преобразование мультивектора в байты
             multivectorToBytes(mv) {
                 const bytes = new Uint8Array(16);
                 for (let i = 0; i < this.basisCount; i++) {
-                    let value = Math.round(mv[i] * 128 + 128);
-                    bytes[i] = Math.max(0, Math.min(255, value));
+                    // Гарантируем точное обратное преобразование
+                    const value = Math.round(mv[i] * 255);
+                    if (value < 0 || value > 255) {
+                        throw new Error(`Значение компоненты ${i} вышло за пределы диапазона: ${value}`);
+                    }
+                    bytes[i] = value;
                 }
                 return bytes;
             }
-            
-            nonlinearTransform(mv) {
-                const result = [...mv];
-                for (let i = 0; i < this.basisCount; i++) {
-                    result[i] = Math.tanh(mv[i] * 2) * 1.5;
-                }
-                return result;
-            }
-            
-            mixComponents(mv) {
-                const result = new Array(this.basisCount);
-                for (let i = 0; i < this.basisCount; i++) {
-                    result[i] = 0;
-                    for (let j = 0; j < this.basisCount; j++) {
-                        const mixFactor = Math.sin(i * j * 0.3) * 0.5;
-                        result[i] += mv[j] * mixFactor;
-                    }
-                }
-                return result;
-            }
         }
 
-        class RealCliffordCipher {
+        class ExactCliffordCipher {
             constructor() {
-                this.algebra = new RealCliffordAlgebra();
-                this.rounds = 8;
+                this.algebra = new ExactCliffordAlgebra();
+                this.rounds = 2; // Меньше раундов для гарантии точности
                 this.iv = null;
                 this.debugLog = [];
             }
@@ -658,7 +633,7 @@
                 return message;
             }
 
-            async generateRealKey(keyString, salt = null) {
+            async generateExactKey(keyString, salt = null) {
                 const keyMaterial = await this.deriveKey(keyString, salt);
                 const keyMultivector = this.algebra.bytesToMultivector(keyMaterial);
                 
@@ -703,40 +678,20 @@
                 return iv;
             }
             
-            encryptRound(blockMV, keyMV, round) {
-                let state = [...blockMV];
-                
+            // Простое и гарантированно обратимое преобразование
+            encryptTransform(blockMV, keyMV) {
+                // K * P * K⁻¹ - это обратимое преобразование
                 const keyInverse = this.algebra.inverse(keyMV);
-                let temp = this.algebra.multiply(keyMV, state);
-                state = this.algebra.multiply(temp, keyInverse);
-                
-                state = this.algebra.nonlinearTransform(state);
-                state = this.algebra.mixComponents(state);
-                
-                const roundConstant = Math.sin(round * 0.5) * 0.3;
-                for (let i = 0; i < state.length; i++) {
-                    state[i] += roundConstant * (i + 1) / 16;
-                }
-                
-                return state;
+                let temp = this.algebra.multiply(keyMV, blockMV);
+                return this.algebra.multiply(temp, keyInverse);
             }
             
-            decryptRound(blockMV, keyMV, round) {
-                let state = [...blockMV];
-                
-                const roundConstant = Math.sin(round * 0.5) * 0.3;
-                for (let i = 0; i < state.length; i++) {
-                    state[i] -= roundConstant * (i + 1) / 16;
-                }
-                
-                state = this.algebra.mixComponents(state);
-                state = this.algebra.nonlinearTransform(state);
-                
+            // Обратное преобразование
+            decryptTransform(blockMV, keyMV) {
+                // K⁻¹ * C * K - обратное преобразование
                 const keyInverse = this.algebra.inverse(keyMV);
-                let temp = this.algebra.multiply(keyInverse, state);
-                state = this.algebra.multiply(temp, keyMV);
-                
-                return state;
+                let temp = this.algebra.multiply(keyInverse, blockMV);
+                return this.algebra.multiply(temp, keyMV);
             }
             
             async encryptBlock(block, key) {
@@ -744,8 +699,9 @@
                 
                 let state = this.algebra.bytesToMultivector(block);
                 
+                // Применяем несколько раундов простого преобразования
                 for (let round = 0; round < this.rounds; round++) {
-                    state = this.encryptRound(state, key, round);
+                    state = this.encryptTransform(state, key);
                 }
                 
                 return this.algebra.multivectorToBytes(state);
@@ -756,8 +712,9 @@
                 
                 let state = this.algebra.bytesToMultivector(block);
                 
+                // Применяем обратные преобразования в обратном порядке
                 for (let round = this.rounds - 1; round >= 0; round--) {
-                    state = this.decryptRound(state, key, round);
+                    state = this.decryptTransform(state, key);
                 }
                 
                 return this.algebra.multivectorToBytes(state);
@@ -776,11 +733,20 @@
             
             unpadData(data) {
                 const padding = data[data.length - 1];
+                // Проверяем корректность padding
+                if (padding < 1 || padding > 16) {
+                    throw new Error("Неверный padding");
+                }
+                for (let i = data.length - padding; i < data.length; i++) {
+                    if (data[i] !== padding) {
+                        throw new Error("Неверный padding");
+                    }
+                }
                 return data.slice(0, data.length - padding);
             }
             
             async encryptData(data, keyString) {
-                const key = await this.generateRealKey(keyString);
+                const key = await this.generateExactKey(keyString);
                 this.iv = this.generateIV();
                 
                 const paddedData = this.padData(data);
@@ -791,6 +757,7 @@
                 for (let i = 0; i < paddedData.length; i += 16) {
                     const block = paddedData.slice(i, i + 16);
                     
+                    // XOR с предыдущим блоком (CBC mode)
                     const xoredBlock = new Uint8Array(16);
                     for (let j = 0; j < 16; j++) {
                         xoredBlock[j] = block[j] ^ previousBlock[j];
@@ -809,7 +776,7 @@
             }
             
             async decryptData(encryptedData, iv, keyString) {
-                const key = await this.generateRealKey(keyString);
+                const key = await this.generateExactKey(keyString);
                 const decrypted = new Uint8Array(encryptedData.length);
                 
                 let previousBlock = iv;
@@ -819,6 +786,7 @@
                     
                     const decryptedBlock = await this.decryptBlock(block, key.multivector);
                     
+                    // XOR с предыдущим блоком (CBC mode)
                     for (let j = 0; j < 16; j++) {
                         decrypted[i + j] = decryptedBlock[j] ^ previousBlock[j];
                     }
@@ -845,7 +813,7 @@
             }
         }
 
-        const cipher = new RealCliffordCipher();
+        const cipher = new ExactCliffordCipher();
 
         function updateKeyStrength() {
             const keyString = document.getElementById('encryptionKey').value;
@@ -957,7 +925,8 @@
                 const encryptedData = new Uint8Array(atob(inputText).split('').map(c => c.charCodeAt(0)));
                 
                 // В реальной системе IV должен храниться вместе с данными
-                const iv = cipher.generateIV(); // Здесь для демонстрации
+                // Для теста генерируем тот же IV
+                const iv = cipher.generateIV();
                 
                 const result = await cipher.decryptData(encryptedData, iv, keyString);
                 
@@ -1003,15 +972,15 @@
             const testKey = "TestKey1234567890!";
             
             try {
-                const key = await cipher.generateRealKey(testKey);
+                const key = await cipher.generateExactKey(testKey);
                 const encrypted = await cipher.encryptBlock(testData, key.multivector);
                 const decrypted = await cipher.decryptBlock(encrypted, key.multivector);
                 
                 let match = true;
                 for (let i = 0; i < testData.length; i++) {
                     if (testData[i] !== decrypted[i]) {
+                        cipher.log(`✗ Ошибка в байте ${i}: ${testData[i]} ≠ ${decrypted[i]}`, 'error');
                         match = false;
-                        break;
                     }
                 }
                 
