@@ -3,479 +3,790 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clifford Cipher - Рабочая версия</title>
+    <title>Профессиональная система байтовых омофонов</title>
     <style>
         :root {
-            --ios-bg: #f5f5f7;
-            --ios-card: #ffffff;
-            --ios-text: #1d1d1f;
-            --ios-blue: #007aff;
-            --ios-green: #34c759;
-            --ios-red: #ff3b30;
-            --ios-border: #e5e5ea;
+            --primary: #1a365d;
+            --secondary: #2a69ac;
+            --accent: #e53e3e;
+            --success: #38a169;
+            --warning: #d69e2e;
+            --light: #f7fafc;
+            --dark: #2d3748;
+            --border: #e2e8f0;
         }
         
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Fira Code', 'Courier New', monospace;
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--ios-bg);
-            color: var(--ios-text);
-            line-height: 1.6;
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            min-height: 100vh;
             padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.6;
+            color: #e2e8f0;
         }
         
         .container {
-            max-width: 800px;
-            margin: 0 auto;
+            background: rgba(26, 32, 44, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            padding: 40px;
+            width: 100%;
+            max-width: 1400px;
+            margin: 20px;
+            border: 1px solid #2d3748;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: var(--ios-blue);
-            color: white;
-            border-radius: 16px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border);
         }
         
         h1 {
-            font-size: 2rem;
+            color: white;
+            font-size: 2.5em;
             margin-bottom: 10px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #63b3ed, #4299e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        h2 {
+            color: #90cdf4;
+            margin: 25px 0 15px;
+            font-size: 1.8rem;
+        }
+        
+        h3 {
+            color: #a0aec0;
+            margin: 20px 0 12px;
+            font-size: 1.4rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 968px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
         
         .card {
-            background: var(--ios-card);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid var(--ios-border);
-        }
-        
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        
-        textarea, input {
-            width: 100%;
-            padding: 15px;
+            background: #2d3748;
             border-radius: 12px;
-            border: 1px solid var(--ios-border);
-            background: var(--ios-card);
-            color: var(--ios-text);
-            font-family: monospace;
-            font-size: 16px;
+            padding: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid #4a5568;
+        }
+        
+        .input-group {
+            margin-bottom: 24px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 0.95em;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            background: #1a202c;
+            color: #e2e8f0;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            border-color: #4299e1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        textarea {
+            min-height: 140px;
             resize: vertical;
-            margin-bottom: 15px;
+            line-height: 1.5;
         }
         
         .btn-group {
             display: flex;
-            gap: 12px;
-            margin: 20px 0;
+            gap: 16px;
+            margin: 28px 0;
             flex-wrap: wrap;
         }
         
         button {
-            padding: 15px 20px;
+            padding: 14px 24px;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
+            font-size: 15px;
             font-weight: 600;
-            font-size: 16px;
             cursor: pointer;
-            background: var(--ios-blue);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 140px;
+        }
+        
+        .btn-encrypt {
+            background: linear-gradient(45deg, #2b6cb0, #2c5282);
             color: white;
-            flex: 1;
-            min-width: 120px;
         }
         
-        button:hover {
-            opacity: 0.9;
+        .btn-decrypt {
+            background: linear-gradient(45deg, #e53e3e, #c53030);
+            color: white;
         }
         
-        .output {
-            background: var(--ios-bg);
-            padding: 15px;
-            border-radius: 12px;
-            margin-top: 15px;
-            min-height: 100px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            border: 1px solid var(--ios-border);
-            font-size: 14px;
+        .btn-generate {
+            background: linear-gradient(45deg, #38a169, #2f855a);
+            color: white;
         }
         
-        .status {
+        .process-visualization {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .byte-block {
+            background: #4a5568;
+            border-radius: 6px;
             padding: 12px;
-            border-radius: 12px;
-            margin: 15px 0;
+            min-width: 80px;
             text-align: center;
-            font-weight: 600;
+            position: relative;
+            transition: all 0.3s;
         }
         
-        .success {
-            background: rgba(52, 199, 89, 0.1);
-            border: 1px solid var(--ios-green);
-            color: var(--ios-green);
+        .original-byte {
+            background: #2b6cb0;
         }
         
-        .error {
-            background: rgba(255, 59, 48, 0.1);
-            border: 1px solid var(--ios-red);
-            color: var(--ios-red);
+        .homophone-byte {
+            background: #38a169;
+        }
+        
+        .arrow {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            color: #90cdf4;
+        }
+        
+        .id-bits {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            font-size: 12px;
+            color: #f6ad55;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        
+        .stat-card {
+            background: #1a202c;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border: 1px solid #4a5568;
+        }
+        
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #63b3ed;
+            margin: 8px 0;
+        }
+        
+        .byte-table {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #1a202c;
+            border-radius: 8px;
+        }
+        
+        .byte-item {
+            background: #2d3748;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #4a5568;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .byte-value {
+            font-weight: bold;
+            color: #63b3ed;
+        }
+        
+        .warning {
+            background: #742a2a;
+            border: 1px solid #e53e3e;
+            color: #fed7d7;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        
+        .hex-view {
+            font-family: 'Fira Code', monospace;
+            background: #1a202c;
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid #4a5568;
+            overflow-x: auto;
+            line-height: 1.8;
+        }
+        
+        .hex-byte {
+            display: inline-block;
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 3px;
+            background: #2d3748;
+        }
+        
+        .original-hex {
+            background: #2b6cb0;
+        }
+        
+        .homophone-hex {
+            background: #38a169;
+        }
+        
+        .id-hex {
+            background: #f6ad55;
+            color: #1a202c;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Clifford Cipher</h1>
-            <p>Исправленная рабочая версия</p>
+            <h1>🔐 Профессиональная система байтовых омофонов</h1>
+            <p>Детерминированная генерация омофонов из ключа • Полная визуализация процесса</p>
         </div>
-        
-        <div class="card">
-            <div class="card-title">Исходный текст</div>
-            <textarea id="inputText" rows="4">Тестовое сообщение</textarea>
-            
-            <div class="card-title">Ключ шифрования</div>
-            <input type="text" id="encryptionKey" value="StrongKey123456">
+
+        <div class="warning">
+            <strong>⚠️ ВАЖНО:</strong> Это профессиональная реализация байтовых омофонов с добавлением ID для обратного преобразования.
         </div>
-        
+
+        <div class="grid">
+            <div class="card">
+                <h2>🔑 Настройки системы</h2>
+                <div class="input-group">
+                    <label for="masterKey">Мастер-ключ (любая строка):</label>
+                    <input type="text" id="masterKey" value="СекретныйКлюч2024!" placeholder="Введите мастер-ключ">
+                </div>
+                
+                <div class="input-group">
+                    <label for="homophoneCount">Количество омофонов на байт:</label>
+                    <select id="homophoneCount">
+                        <option value="2">2 омофона (1 бит ID)</option>
+                        <option value="4" selected>4 омофона (2 бита ID)</option>
+                        <option value="8">8 омофонов (3 бита ID)</option>
+                        <option value="16">16 омофонов (4 бита ID)</option>
+                    </select>
+                </div>
+                
+                <button class="btn-generate" onclick="generateNewKey()">
+                    <span class="icon">🎲</span> Сгенерировать ключ
+                </button>
+            </div>
+
+            <div class="card">
+                <h2>📝 Исходные данные</h2>
+                <div class="input-group">
+                    <label for="inputText">Текст для шифрования:</label>
+                    <textarea id="inputText">Привет мир! Hello world! 123</textarea>
+                </div>
+                
+                <div class="input-group">
+                    <label>Байтовое представление (HEX):</label>
+                    <div class="hex-view" id="hexOriginal"></div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Размер данных</div>
+                        <div class="stat-value" id="dataSize">0 B</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Энтропия</div>
+                        <div class="stat-value" id="dataEntropy">0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="btn-group">
-            <button onclick="encryptText()">Зашифровать</button>
-            <button onclick="decryptText()">Расшифровать</button>
-            <button onclick="testReversibility()">Тест обратимости</button>
+            <button class="btn-encrypt" onclick="encryptData()">
+                <span class="icon">🔒</span> Зашифровать
+            </button>
+            <button class="btn-decrypt" onclick="decryptData()">
+                <span class="icon">🔓</span> Расшифровать
+            </button>
         </div>
-        
+
         <div class="card">
-            <div class="card-title">Результаты</div>
-            <div class="output" id="resultOutput">—</div>
-            <div id="validationOutput" class="status">—</div>
+            <h2>📊 Визуализация процесса шифрования</h2>
+            <div id="processVisualization" class="process-visualization">
+                <div class="byte-block original-byte">
+                    <div class="id-bits">ID: 00</div>
+                    0x41
+                </div>
+                <div class="arrow">→</div>
+                <div class="byte-block homophone-byte">
+                    <div class="id-bits">ID: 10</div>
+                    0xAB
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Размер после шифрования</div>
+                    <div class="stat-value" id="encryptedSize">0 B</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Энтропия результата</div>
+                    <div class="stat-value" id="encryptedEntropy">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Коэффициент расширения</div>
+                    <div class="stat-value" id="expansionRatio">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📋 Результат шифрования</h2>
+                <div class="input-group">
+                    <label for="outputText">Зашифрованные данные (HEX):</label>
+                    <textarea id="outputText" readonly placeholder="Результат появится здесь..."></textarea>
+                </div>
+                
+                <div class="input-group">
+                    <label>Визуализация байтов:</label>
+                    <div class="hex-view" id="hexOutput"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔄 Таблица байтовых омофонов</h2>
+                <div class="input-group">
+                    <label>Сгенерированные омофоны (первые 32 байта):</label>
+                    <div class="byte-table" id="byteTablePreview">
+                        <div class="byte-item">Загрузка...</div>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Байтов в таблице</div>
+                        <div class="stat-value" id="tableSize">256</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Всего омофонов</div>
+                        <div class="stat-value" id="totalHomophones">0</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Правильная реализация с гарантией диапазона значений
-        class WorkingCliffordAlgebra {
+        class ByteHomophonicCipher {
             constructor() {
-                this.dimension = 4;
-                this.metric = [1, 1, 1, -1];
-                this.basisCount = 16;
-                this.multiplicationTable = this.generateMultiplicationTable();
+                this.homophoneTable = new Map();
             }
-            
-            generateMultiplicationTable() {
-                const table = new Array(this.basisCount);
-                for (let i = 0; i < this.basisCount; i++) {
-                    table[i] = new Array(this.basisCount);
-                    for (let j = 0; j < this.basisCount; j++) {
-                        table[i][j] = this.multiplyBasisElements(i, j);
-                    }
+
+            // Детерминированный PRNG на основе ключа
+            createKeyDerivedRNG(key) {
+                let seed = 0;
+                const encoder = new TextEncoder();
+                const keyBytes = encoder.encode(key);
+                
+                for (let i = 0; i < keyBytes.length; i++) {
+                    seed = (seed << 5) - seed + keyBytes[i];
+                    seed = seed & seed; // Convert to 32-bit integer
                 }
+                
+                return {
+                    next: () => {
+                        seed = (seed * 1664525 + 1013904223) % 4294967296;
+                        return seed / 4294967296;
+                    }
+                };
+            }
+
+            // Генерация таблицы омофонов для всех 256 байтов
+            generateHomophoneTable(masterKey, homophonesPerByte = 4) {
+                const table = new Map();
+                const rng = this.createKeyDerivedRNG(masterKey);
+                
+                // Для каждого возможного байта (0-255)
+                for (let byteValue = 0; byteValue < 256; byteValue++) {
+                    const homophones = [];
+                    
+                    // Генерируем омофоны для этого байта
+                    for (let i = 0; i < homophonesPerByte; i++) {
+                        // Генерируем уникальный омофон
+                        let homophone;
+                        let attempts = 0;
+                        
+                        do {
+                            homophone = Math.floor(rng.next() * 256);
+                            attempts++;
+                        } while (homophones.includes(homophone) && attempts < 100);
+                        
+                        homophones.push(homophone);
+                    }
+                    
+                    table.set(byteValue, homophones);
+                }
+                
+                this.homophoneTable = table;
                 return table;
             }
-            
-            multiplyBasisElements(a, b) {
-                if (a === 0) return { value: b, sign: 1 };
-                if (b === 0) return { value: a, sign: 1 };
+
+            // Шифрование данных с добавлением ID омофонов
+            encrypt(data, masterKey) {
+                const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
+                this.generateHomophoneTable(masterKey, homophonesPerByte);
                 
-                const aVectors = this.getBasisVectors(a);
-                const bVectors = this.getBasisVectors(b);
+                const rng = this.createKeyDerivedRNG(masterKey + data.length);
+                const result = new Uint8Array(data.length * 2); // Каждый байт превращается в 2 байта
+                const processSteps = [];
                 
-                let resultVectors = [...aVectors];
-                let sign = 1;
-                
-                for (const bVec of bVectors) {
-                    let insertPos = resultVectors.length;
+                for (let i = 0; i < data.length; i++) {
+                    const originalByte = data[i];
+                    const homophones = this.homophoneTable.get(originalByte);
+                    const homophoneIndex = Math.floor(rng.next() * homophones.length);
+                    const selectedHomophone = homophones[homophoneIndex];
                     
-                    for (let i = 0; i < resultVectors.length; i++) {
-                        if (resultVectors[i] === bVec) {
-                            sign *= this.metric[bVec];
-                            resultVectors.splice(i, 1);
-                            insertPos = -1;
-                            break;
-                        } else if (resultVectors[i] > bVec) {
-                            insertPos = i;
+                    // Формируем результирующий байт: первые биты - ID, остальные - омофон
+                    const idBits = homophoneIndex;
+                    result[i * 2] = idBits; // ID омофона
+                    result[i * 2 + 1] = selectedHomophone; // Сам омофон
+                    
+                    processSteps.push({
+                        original: originalByte,
+                        homophone: selectedHomophone,
+                        id: idBits,
+                        idBits: idBits.toString(2).padStart(Math.ceil(Math.log2(homophones.length)), '0')
+                    });
+                }
+                
+                return { encryptedData: result, processSteps };
+            }
+
+            // Дешифрование данных
+            decrypt(encryptedData, masterKey) {
+                const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
+                this.generateHomophoneTable(masterKey, homophonesPerByte);
+                
+                const result = new Uint8Array(encryptedData.length / 2);
+                
+                for (let i = 0; i < encryptedData.length; i += 2) {
+                    const idBits = encryptedData[i];
+                    const homophoneByte = encryptedData[i + 1];
+                    
+                    // Находим оригинальный байт по ID и омофону
+                    for (const [originalByte, homophones] of this.homophoneTable.entries()) {
+                        if (idBits < homophones.length && homophones[idBits] === homophoneByte) {
+                            result[i / 2] = originalByte;
                             break;
                         }
                     }
-                    
-                    if (insertPos >= 0) {
-                        sign *= Math.pow(-1, resultVectors.length - insertPos);
-                        resultVectors.splice(insertPos, 0, bVec);
-                    }
-                }
-                
-                let resultValue = 0;
-                for (const vec of resultVectors) {
-                    resultValue |= (1 << vec);
-                }
-                
-                return { value: resultValue, sign: sign };
-            }
-            
-            getBasisVectors(x) {
-                const vectors = [];
-                for (let i = 0; i < this.dimension; i++) {
-                    if (x & (1 << i)) {
-                        vectors.push(i);
-                    }
-                }
-                return vectors.sort((a, b) => a - b);
-            }
-            
-            multiply(a, b) {
-                const result = new Array(this.basisCount).fill(0);
-                
-                for (let i = 0; i < this.basisCount; i++) {
-                    if (Math.abs(a[i]) < 1e-10) continue;
-                    
-                    for (let j = 0; j < this.basisCount; j++) {
-                        if (Math.abs(b[j]) < 1e-10) continue;
-                        
-                        const product = this.multiplicationTable[i][j];
-                        const coefficient = a[i] * b[j] * product.sign;
-                        result[product.value] = (result[product.value] || 0) + coefficient;
-                    }
                 }
                 
                 return result;
             }
-            
-            inverse(mv) {
-                const reversed = this.reverse(mv);
-                const norm = this.multiply(mv, reversed);
-                
-                if (Math.abs(norm[0]) < 1e-10) {
-                    throw new Error("Невозможно обратить мультивектор");
+
+            // Расчет энтропии данных
+            calculateEntropy(data) {
+                const freq = new Array(256).fill(0);
+                for (const byte of data) {
+                    freq[byte]++;
                 }
                 
-                const result = new Array(this.basisCount).fill(0);
-                for (let i = 0; i < this.basisCount; i++) {
-                    result[i] = reversed[i] / norm[0];
-                }
+                let entropy = 0;
+                const length = data.length;
                 
-                return result;
-            }
-            
-            reverse(mv) {
-                const result = [...mv];
-                for (let i = 1; i < this.basisCount; i++) {
-                    const vectors = this.getBasisVectors(i);
-                    if (vectors.length % 2 === 1) {
-                        result[i] = -result[i];
+                for (const count of freq) {
+                    if (count > 0) {
+                        const p = count / length;
+                        entropy -= p * Math.log2(p);
                     }
                 }
-                return result;
-            }
-            
-            // ФИКС: Гарантируем, что значения остаются в допустимом диапазоне
-            bytesToMultivector(bytes) {
-                const mv = new Array(this.basisCount).fill(0);
-                for (let i = 0; i < this.basisCount; i++) {
-                    // Масштабируем в диапазон [-0.5, 0.5] для избежания переполнения
-                    mv[i] = (bytes[i] / 255) - 0.5;
-                }
-                return mv;
-            }
-            
-            multivectorToBytes(mv) {
-                const bytes = new Uint8Array(this.basisCount);
-                for (let i = 0; i < this.basisCount; i++) {
-                    // Обратное масштабирование с проверкой границ
-                    let value = Math.round((mv[i] + 0.5) * 255);
-                    value = Math.max(0, Math.min(255, value));
-                    bytes[i] = value;
-                }
-                return bytes;
+                
+                return entropy;
             }
         }
 
-        class WorkingCliffordCipher {
-            constructor() {
-                this.algebra = new WorkingCliffordAlgebra();
-            }
-            
-            async encryptText(text, keyString) {
-                try {
-                    const keyBytes = new TextEncoder().encode(keyString);
-                    const textBytes = new TextEncoder().encode(text);
-                    
-                    // Дополняем ключ до 16 байт
-                    const paddedKey = this.padTo16Bytes(keyBytes);
-                    const keyMultivector = this.algebra.bytesToMultivector(paddedKey);
-                    
-                    const resultBytes = new Uint8Array(textBytes.length);
-                    
-                    for (let i = 0; i < textBytes.length; i++) {
-                        // Создаем мультивектор только из одного байта (остальные 0)
-                        const byteArray = new Uint8Array(16);
-                        byteArray[0] = textBytes[i];
-                        const byteMV = this.algebra.bytesToMultivector(byteArray);
-                        
-                        const kInverse = this.algebra.inverse(keyMultivector);
-                        
-                        // K * P * K⁻¹
-                        const kp = this.algebra.multiply(keyMultivector, byteMV);
-                        const encryptedMV = this.algebra.multiply(kp, kInverse);
-                        
-                        const encryptedBytes = this.algebra.multivectorToBytes(encryptedMV);
-                        resultBytes[i] = encryptedBytes[0]; // Берем только первый байт
-                    }
-                    
-                    return Array.from(resultBytes);
-                } catch (error) {
-                    throw new Error(`Ошибка шифрования: ${error.message}`);
-                }
-            }
-            
-            async decryptText(encryptedBytes, keyString) {
-                try {
-                    const keyBytes = new TextEncoder().encode(keyString);
-                    const paddedKey = this.padTo16Bytes(keyBytes);
-                    const keyMultivector = this.algebra.bytesToMultivector(paddedKey);
-                    
-                    const resultBytes = new Uint8Array(encryptedBytes.length);
-                    
-                    for (let i = 0; i < encryptedBytes.length; i++) {
-                        // Создаем мультивектор из зашифрованного байта
-                        const byteArray = new Uint8Array(16);
-                        byteArray[0] = encryptedBytes[i];
-                        const byteMV = this.algebra.bytesToMultivector(byteArray);
-                        
-                        const kInverse = this.algebra.inverse(keyMultivector);
-                        
-                        // K⁻¹ * C * K
-                        const kInverseC = this.algebra.multiply(kInverse, byteMV);
-                        const decryptedMV = this.algebra.multiply(kInverseC, keyMultivector);
-                        
-                        const decryptedBytes = this.algebra.multivectorToBytes(decryptedMV);
-                        resultBytes[i] = decryptedBytes[0];
-                    }
-                    
-                    return new TextDecoder().decode(resultBytes);
-                } catch (error) {
-                    throw new Error(`Ошибка дешифрования: ${error.message}`);
-                }
-            }
-            
-            padTo16Bytes(bytes) {
-                const result = new Uint8Array(16);
-                for (let i = 0; i < 16; i++) {
-                    result[i] = bytes[i % bytes.length];
-                }
-                return result;
-            }
-            
-            async testReversibility() {
-                const testText = "Test123";
-                const testKey = "Key123";
-                
-                try {
-                    const encrypted = await this.encryptText(testText, testKey);
-                    const decrypted = await this.decryptText(encrypted, testKey);
-                    
-                    return {
-                        success: decrypted === testText,
-                        original: testText,
-                        decrypted: decrypted,
-                        encrypted: encrypted
-                    };
-                } catch (error) {
-                    return {
-                        success: false,
-                        error: error.message
-                    };
-                }
-            }
+        // Глобальные переменные
+        const cipher = new ByteHomophonicCipher();
+        let lastProcessSteps = [];
+
+        // Генерация нового ключа
+        function generateNewKey() {
+            const randomBytes = new Uint8Array(16);
+            crypto.getRandomValues(randomBytes);
+            const key = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            document.getElementById('masterKey').value = key;
+            updateByteTable();
         }
 
-        const cipher = new WorkingCliffordCipher();
-
-        async function encryptText() {
+        // Обновление таблицы омофонов
+        function updateByteTable() {
+            const masterKey = document.getElementById('masterKey').value;
+            const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
+            
             try {
-                const text = document.getElementById('inputText').value;
-                const key = document.getElementById('encryptionKey').value;
-                
-                if (!text || !key) {
-                    throw new Error("Введите текст и ключ");
-                }
-                
-                const encrypted = await cipher.encryptText(text, key);
-                document.getElementById('resultOutput').textContent = 
-                    `Зашифрованные байты:\n[${encrypted.join(', ')}]`;
-                
-                document.getElementById('validationOutput').textContent = '✓ Шифрование успешно';
-                document.getElementById('validationOutput').className = 'status success';
+                cipher.generateHomophoneTable(masterKey, homophonesPerByte);
+                displayByteTablePreview();
             } catch (error) {
-                document.getElementById('resultOutput').textContent = error.message;
-                document.getElementById('validationOutput').textContent = '✗ Ошибка шифрования';
-                document.getElementById('validationOutput').className = 'status error';
+                console.error('Error generating homophone table:', error);
             }
         }
 
-        async function decryptText() {
-            try {
-                const text = document.getElementById('inputText').value;
-                const key = document.getElementById('encryptionKey').value;
+        // Отображение превью таблицы омофонов
+        function displayByteTablePreview() {
+            const preview = document.getElementById('byteTablePreview');
+            preview.innerHTML = '';
+            
+            const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
+            let totalHomophones = 0;
+            
+            // Показываем первые 32 байта для наглядности
+            for (let byteValue = 0; byteValue < 32; byteValue++) {
+                const homophones = cipher.homophoneTable.get(byteValue) || [];
+                totalHomophones += homophones.length;
                 
-                if (!text || !key) {
-                    throw new Error("Введите данные и ключ");
-                }
-                
-                // Парсим байты из текста
-                const byteMatch = text.match(/\[([^\]]+)\]/);
-                let bytes;
-                
-                if (byteMatch) {
-                    bytes = byteMatch[1].split(',').map(b => parseInt(b.trim()));
-                    const decrypted = await cipher.decryptText(bytes, key);
-                    document.getElementById('resultOutput').textContent = 
-                        `Расшифрованный текст: ${decrypted}`;
-                } else {
-                    // Если это не байты, шифруем и сразу дешифруем
-                    const encrypted = await cipher.encryptText(text, key);
-                    const decrypted = await cipher.decryptText(encrypted, key);
-                    document.getElementById('resultOutput').textContent = 
-                        `Зашифровано: [${encrypted.join(', ')}]\nРасшифровано: ${decrypted}`;
-                }
-                
-                document.getElementById('validationOutput').textContent = '✓ Дешифрование успешно';
-                document.getElementById('validationOutput').className = 'status success';
-            } catch (error) {
-                document.getElementById('resultOutput').textContent = error.message;
-                document.getElementById('validationOutput').textContent = '✗ Ошибка дешифрования';
-                document.getElementById('validationOutput').className = 'status error';
+                const item = document.createElement('div');
+                item.className = 'byte-item';
+                item.innerHTML = `
+                    <span class="byte-value">0x${byteValue.toString(16).padStart(2, '0')}</span> → 
+                    ${homophones.map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' ')}
+                `;
+                preview.appendChild(item);
+            }
+            
+            document.getElementById('totalHomophones').textContent = 256 * homophonesPerByte;
+        }
+
+        // Отображение байтов в HEX-формате
+        function displayHexData(data, elementId, className = '') {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            
+            for (let i = 0; i < Math.min(data.length, 100); i++) {
+                const byteElement = document.createElement('span');
+                byteElement.className = `hex-byte ${className}`;
+                byteElement.textContent = data[i].toString(16).padStart(2, '0');
+                container.appendChild(byteElement);
+            }
+            
+            if (data.length > 100) {
+                const ellipsis = document.createElement('span');
+                ellipsis.textContent = ` ... (ещё ${data.length - 100} байт)`;
+                ellipsis.style.color = '#a0aec0';
+                container.appendChild(ellipsis);
             }
         }
 
-        async function testReversibility() {
+        // Шифрование данных
+        function encryptData() {
+            const inputText = document.getElementById('inputText').value;
+            const masterKey = document.getElementById('masterKey').value;
+            
+            if (!inputText) {
+                alert('Введите данные для шифрования');
+                return;
+            }
+            
+            if (!masterKey) {
+                alert('Введите мастер-ключ');
+                return;
+            }
+            
             try {
-                const result = await cipher.testReversibility();
+                // Конвертируем текст в байты
+                const encoder = new TextEncoder();
+                const data = encoder.encode(inputText);
                 
-                if (result.success) {
-                    document.getElementById('resultOutput').textContent = 
-                        `ТЕСТ ПРОЙДЕН!\nОригинал: "${result.original}"\nЗашифровано: [${result.encrypted.join(', ')}]\nРасшифровано: "${result.decrypted}"`;
-                    document.getElementById('validationOutput').textContent = '✓ Тест обратимости пройден';
-                    document.getElementById('validationOutput').className = 'status success';
-                } else {
-                    document.getElementById('resultOutput').textContent = 
-                        `Ошибка теста: ${result.error}`;
-                    document.getElementById('validationOutput').textContent = '✗ Тест не пройден';
-                    document.getElementById('validationOutput').className = 'status error';
-                }
+                // Отображаем исходные байты
+                displayHexData(data, 'hexOriginal', 'original-hex');
+                
+                // Шифруем данные
+                const { encryptedData, processSteps } = cipher.encrypt(data, masterKey);
+                lastProcessSteps = processSteps;
+                
+                // Отображаем результат
+                const outputHex = Array.from(encryptedData).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                document.getElementById('outputText').value = outputHex;
+                
+                // Отображаем зашифрованные байты
+                displayHexData(encryptedData, 'hexOutput', 'homophone-hex');
+                
+                // Визуализируем процесс
+                visualizeProcess();
+                
+                // Обновляем метрики
+                updateMetrics(data, encryptedData);
             } catch (error) {
-                document.getElementById('resultOutput').textContent = error.message;
-                document.getElementById('validationOutput').textContent = '✗ Ошибка теста';
-                document.getElementById('validationOutput').className = 'status error';
+                alert('Ошибка шифрования: ' + error.message);
             }
         }
+
+        // Дешифрование данных
+        function decryptData() {
+            const inputHex = document.getElementById('inputText').value.trim();
+            const masterKey = document.getElementById('masterKey').value;
+            
+            if (!inputHex) {
+                alert('Введите HEX-данные для дешифрования');
+                return;
+            }
+            
+            if (!masterKey) {
+                alert('Введите мастер-ключ');
+                return;
+            }
+            
+            try {
+                // Конвертируем HEX-строку в байты
+                const hexBytes = inputHex.split(/\s+/);
+                const encryptedData = new Uint8Array(hexBytes.map(byte => parseInt(byte, 16)));
+                
+                // Дешифруем данные
+                const decryptedData = cipher.decrypt(encryptedData, masterKey);
+                
+                // Конвертируем байты обратно в текст
+                const decoder = new TextDecoder();
+                const decryptedText = decoder.decode(decryptedData);
+                
+                // Отображаем результат
+                document.getElementById('outputText').value = decryptedText;
+                
+                // Обновляем метрики
+                updateMetrics(encryptedData, decryptedData);
+            } catch (error) {
+                alert('Ошибка дешифрования: ' + error.message);
+            }
+        }
+
+        // Визуализация процесса шифрования
+        function visualizeProcess() {
+            const container = document.getElementById('processVisualization');
+            container.innerHTML = '';
+            
+            // Показываем только первые 8 байтов для наглядности
+            const stepsToShow = lastProcessSteps.slice(0, 8);
+            
+            stepsToShow.forEach((step, index) => {
+                if (index > 0) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'arrow';
+                    arrow.textContent = '→';
+                    container.appendChild(arrow);
+                }
+                
+                const originalBlock = document.createElement('div');
+                originalBlock.className = 'byte-block original-byte';
+                originalBlock.innerHTML = `
+                    <div class="id-bits">ID: ${step.idBits}</div>
+                    0x${step.original.toString(16).padStart(2, '0')}
+                `;
+                container.appendChild(originalBlock);
+                
+                const arrow = document.createElement('div');
+                arrow.className = 'arrow';
+                arrow.textContent = '→';
+                container.appendChild(arrow);
+                
+                const homophoneBlock = document.createElement('div');
+                homophoneBlock.className = 'byte-block homophone-byte';
+                homophoneBlock.innerHTML = `
+                    <div class="id-bits">ID: ${step.idBits}</div>
+                    0x${step.homophone.toString(16).padStart(2, '0')}
+                `;
+                container.appendChild(homophoneBlock);
+            });
+            
+            if (lastProcessSteps.length > 8) {
+                const ellipsis = document.createElement('div');
+                ellipsis.style.cssText = 'padding: 10px; color: #a0aec0; font-style: italic;';
+                ellipsis.textContent = `... и ещё ${lastProcessSteps.length - 8} байтов`;
+                container.appendChild(ellipsis);
+            }
+        }
+
+        // Обновление метрик
+        function updateMetrics(originalData, processedData) {
+            if (originalData && processedData) {
+                const originalSize = originalData.length;
+                const processedSize = processedData.length;
+                const expansion = ((processedSize - originalSize) / originalSize * 100).toFixed(1);
+                
+                document.getElementById('dataSize').textContent = originalSize + ' B';
+                document.getElementById('encryptedSize').textContent = processedSize + ' B';
+                document.getElementById('expansionRatio').textContent = expansion + '%';
+                
+                document.getElementById('dataEntropy').textContent = cipher.calculateEntropy(originalData).toFixed(2);
+                document.getElementById('encryptedEntropy').textContent = cipher.calculateEntropy(processedData).toFixed(2);
+            }
+        }
+
+        // Инициализация
+        window.onload = function() {
+            generateNewKey();
+            
+            // Слушатели изменений
+            document.getElementById('masterKey').addEventListener('input', updateByteTable);
+            document.getElementById('homophoneCount').addEventListener('change', updateByteTable);
+        };
     </script>
 </body>
 </html>
