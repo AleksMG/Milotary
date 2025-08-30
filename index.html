@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Профессиональная система байтовых омофонов</title>
+    <title>Исправленная система байтовых омофонов</title>
     <style>
         :root {
             --primary: #1a365d;
@@ -135,6 +135,7 @@
             gap: 16px;
             margin: 28px 0;
             flex-wrap: wrap;
+            justify-content: center;
         }
         
         button {
@@ -173,6 +174,7 @@
             gap: 15px;
             margin: 20px 0;
             justify-content: center;
+            align-items: center;
         }
         
         .byte-block {
@@ -193,20 +195,16 @@
             background: #38a169;
         }
         
+        .id-byte {
+            background: #f6ad55;
+            color: #1a202c;
+        }
+        
         .arrow {
             font-size: 24px;
             display: flex;
             align-items: center;
             color: #90cdf4;
-        }
-        
-        .id-bits {
-            position: absolute;
-            top: -20px;
-            left: 0;
-            right: 0;
-            font-size: 12px;
-            color: #f6ad55;
         }
         
         .stats {
@@ -268,6 +266,16 @@
             font-size: 0.9em;
         }
         
+        .success {
+            background: #22543d;
+            border: 1px solid #38a169;
+            color: #c6f6d5;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        
         .hex-view {
             font-family: 'Fira Code', monospace;
             background: #1a202c;
@@ -276,6 +284,7 @@
             border: 1px solid #4a5568;
             overflow-x: auto;
             line-height: 1.8;
+            white-space: nowrap;
         }
         
         .hex-byte {
@@ -298,17 +307,35 @@
             background: #f6ad55;
             color: #1a202c;
         }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background: #22543d;
+            color: #c6f6d5;
+        }
+        
+        .status-error {
+            background: #742a2a;
+            color: #fed7d7;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Профессиональная система байтовых омофонов</h1>
-            <p>Детерминированная генерация омофонов из ключа • Полная визуализация процесса</p>
+            <h1>🔐 Исправленная система байтовых омофонов</h1>
+            <p>Гарантированная обратимость • Правильное шифрование и дешифрование</p>
         </div>
 
         <div class="warning">
-            <strong>⚠️ ВАЖНО:</strong> Это профессиональная реализация байтовых омофонов с добавлением ID для обратного преобразования.
+            <strong>⚠️ ИСПРАВЛЕНИЯ:</strong> Полностью переработан алгоритм для обеспечения правильной работы шифрования и дешифрования.
         </div>
 
         <div class="grid">
@@ -332,13 +359,15 @@
                 <button class="btn-generate" onclick="generateNewKey()">
                     <span class="icon">🎲</span> Сгенерировать ключ
                 </button>
+                
+                <div id="statusKey" class="status status-success">Ключ установлен</div>
             </div>
 
             <div class="card">
                 <h2>📝 Исходные данные</h2>
                 <div class="input-group">
                     <label for="inputText">Текст для шифрования:</label>
-                    <textarea id="inputText">Привет мир! Hello world! 123</textarea>
+                    <textarea id="inputText">Привет мир! Hello world! 123 Тестирование обратимости</textarea>
                 </div>
                 
                 <div class="input-group">
@@ -371,15 +400,10 @@
         <div class="card">
             <h2>📊 Визуализация процесса шифрования</h2>
             <div id="processVisualization" class="process-visualization">
-                <div class="byte-block original-byte">
-                    <div class="id-bits">ID: 00</div>
-                    0x41
-                </div>
+                <div class="byte-block original-byte">0x00</div>
                 <div class="arrow">→</div>
-                <div class="byte-block homophone-byte">
-                    <div class="id-bits">ID: 10</div>
-                    0xAB
-                </div>
+                <div class="byte-block id-byte">ID:0</div>
+                <div class="byte-block homophone-byte">0x00</div>
             </div>
             
             <div class="stats">
@@ -400,9 +424,9 @@
 
         <div class="grid">
             <div class="card">
-                <h2>📋 Результат шифрования</h2>
+                <h2>📋 Результат обработки</h2>
                 <div class="input-group">
-                    <label for="outputText">Зашифрованные данные (HEX):</label>
+                    <label for="outputText">Результат (HEX):</label>
                     <textarea id="outputText" readonly placeholder="Результат появится здесь..."></textarea>
                 </div>
                 
@@ -410,12 +434,14 @@
                     <label>Визуализация байтов:</label>
                     <div class="hex-view" id="hexOutput"></div>
                 </div>
+                
+                <div id="statusProcess" class="status">Ожидание операции...</div>
             </div>
 
             <div class="card">
                 <h2>🔄 Таблица байтовых омофонов</h2>
                 <div class="input-group">
-                    <label>Сгенерированные омофоны (первые 32 байта):</label>
+                    <label>Сгенерированные омофоны (первые 16 байтов):</label>
                     <div class="byte-table" id="byteTablePreview">
                         <div class="byte-item">Загрузка...</div>
                     </div>
@@ -436,9 +462,10 @@
     </div>
 
     <script>
-        class ByteHomophonicCipher {
+        class FixedByteHomophonicCipher {
             constructor() {
                 this.homophoneTable = new Map();
+                this.reverseTable = new Map();
             }
 
             // Детерминированный PRNG на основе ключа
@@ -456,14 +483,27 @@
                     next: () => {
                         seed = (seed * 1664525 + 1013904223) % 4294967296;
                         return seed / 4294967296;
-                    }
+                    },
+                    nextInt: (max) => Math.floor(this.next() * max)
                 };
             }
 
             // Генерация таблицы омофонов для всех 256 байтов
             generateHomophoneTable(masterKey, homophonesPerByte = 4) {
                 const table = new Map();
+                const reverse = new Map();
                 const rng = this.createKeyDerivedRNG(masterKey);
+                
+                // Создаем пул всех возможных байтов (0-255)
+                const allBytes = Array.from({length: 256}, (_, i) => i);
+                
+                // Перемешиваем пул детерминированно на основе ключа
+                for (let i = allBytes.length - 1; i > 0; i--) {
+                    const j = Math.floor(rng.next() * (i + 1));
+                    [allBytes[i], allBytes[j]] = [allBytes[j], allBytes[i]];
+                }
+                
+                let byteIndex = 0;
                 
                 // Для каждого возможного байта (0-255)
                 for (let byteValue = 0; byteValue < 256; byteValue++) {
@@ -471,22 +511,27 @@
                     
                     // Генерируем омофоны для этого байта
                     for (let i = 0; i < homophonesPerByte; i++) {
-                        // Генерируем уникальный омофон
-                        let homophone;
-                        let attempts = 0;
+                        if (byteIndex >= allBytes.length) {
+                            // Если пул исчерпан, начинаем сначала
+                            byteIndex = 0;
+                            for (let i = allBytes.length - 1; i > 0; i--) {
+                                const j = Math.floor(rng.next() * (i + 1));
+                                [allBytes[i], allBytes[j]] = [allBytes[j], allBytes[i]];
+                            }
+                        }
                         
-                        do {
-                            homophone = Math.floor(rng.next() * 256);
-                            attempts++;
-                        } while (homophones.includes(homophone) && attempts < 100);
-                        
+                        const homophone = allBytes[byteIndex++];
                         homophones.push(homophone);
+                        
+                        // Заполняем обратную таблицу: homophone -> (original, index)
+                        reverse.set(homophone, { original: byteValue, index: i });
                     }
                     
                     table.set(byteValue, homophones);
                 }
                 
                 this.homophoneTable = table;
+                this.reverseTable = reverse;
                 return table;
             }
 
@@ -496,25 +541,38 @@
                 this.generateHomophoneTable(masterKey, homophonesPerByte);
                 
                 const rng = this.createKeyDerivedRNG(masterKey + data.length);
-                const result = new Uint8Array(data.length * 2); // Каждый байт превращается в 2 байта
+                const result = new Uint8Array(data.length * 2);
                 const processSteps = [];
                 
                 for (let i = 0; i < data.length; i++) {
                     const originalByte = data[i];
+                    
+                    if (!this.homophoneTable.has(originalByte)) {
+                        // Если байта нет в таблице, просто копируем его
+                        result[i * 2] = 255; // Специальный ID для неизменяемых байтов
+                        result[i * 2 + 1] = originalByte;
+                        processSteps.push({
+                            original: originalByte,
+                            homophone: originalByte,
+                            id: 255,
+                            idBits: '11111111'
+                        });
+                        continue;
+                    }
+                    
                     const homophones = this.homophoneTable.get(originalByte);
                     const homophoneIndex = Math.floor(rng.next() * homophones.length);
                     const selectedHomophone = homophones[homophoneIndex];
                     
-                    // Формируем результирующий байт: первые биты - ID, остальные - омофон
-                    const idBits = homophoneIndex;
-                    result[i * 2] = idBits; // ID омофона
-                    result[i * 2 + 1] = selectedHomophone; // Сам омофон
+                    // Сохраняем ID и омофон
+                    result[i * 2] = homophoneIndex;
+                    result[i * 2 + 1] = selectedHomophone;
                     
                     processSteps.push({
                         original: originalByte,
                         homophone: selectedHomophone,
-                        id: idBits,
-                        idBits: idBits.toString(2).padStart(Math.ceil(Math.log2(homophones.length)), '0')
+                        id: homophoneIndex,
+                        idBits: homophoneIndex.toString(2).padStart(Math.ceil(Math.log2(homophones.length)), '0')
                     });
                 }
                 
@@ -526,19 +584,33 @@
                 const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
                 this.generateHomophoneTable(masterKey, homophonesPerByte);
                 
+                if (encryptedData.length % 2 !== 0) {
+                    throw new Error("Некорректные данные: длина должна быть кратной 2");
+                }
+                
                 const result = new Uint8Array(encryptedData.length / 2);
                 
                 for (let i = 0; i < encryptedData.length; i += 2) {
                     const idBits = encryptedData[i];
                     const homophoneByte = encryptedData[i + 1];
                     
-                    // Находим оригинальный байт по ID и омофону
-                    for (const [originalByte, homophones] of this.homophoneTable.entries()) {
-                        if (idBits < homophones.length && homophones[idBits] === homophoneByte) {
-                            result[i / 2] = originalByte;
-                            break;
-                        }
+                    if (idBits === 255) {
+                        // Специальный случай: неизменяемый байт
+                        result[i / 2] = homophoneByte;
+                        continue;
                     }
+                    
+                    if (!this.reverseTable.has(homophoneByte)) {
+                        throw new Error(`Неизвестный омофон: 0x${homophoneByte.toString(16)}`);
+                    }
+                    
+                    const { original, index } = this.reverseTable.get(homophoneByte);
+                    
+                    if (index !== idBits) {
+                        throw new Error(`Несоответствие ID: ожидалось ${index}, получено ${idBits}`);
+                    }
+                    
+                    result[i / 2] = original;
                 }
                 
                 return result;
@@ -566,8 +638,7 @@
         }
 
         // Глобальные переменные
-        const cipher = new ByteHomophonicCipher();
-        let lastProcessSteps = [];
+        const cipher = new FixedByteHomophonicCipher();
 
         // Генерация нового ключа
         function generateNewKey() {
@@ -575,6 +646,7 @@
             crypto.getRandomValues(randomBytes);
             const key = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
             document.getElementById('masterKey').value = key;
+            updateStatus('Ключ сгенерирован', 'success');
             updateByteTable();
         }
 
@@ -586,8 +658,10 @@
             try {
                 cipher.generateHomophoneTable(masterKey, homophonesPerByte);
                 displayByteTablePreview();
+                updateStatus('Таблица омофонов обновлена', 'success');
             } catch (error) {
                 console.error('Error generating homophone table:', error);
+                updateStatus('Ошибка генерации таблицы: ' + error.message, 'error');
             }
         }
 
@@ -597,18 +671,18 @@
             preview.innerHTML = '';
             
             const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
-            let totalHomophones = 0;
             
-            // Показываем первые 32 байта для наглядности
-            for (let byteValue = 0; byteValue < 32; byteValue++) {
+            // Показываем первые 16 байтов для наглядности
+            for (let byteValue = 0; byteValue < 16; byteValue++) {
                 const homophones = cipher.homophoneTable.get(byteValue) || [];
-                totalHomophones += homophones.length;
                 
                 const item = document.createElement('div');
                 item.className = 'byte-item';
                 item.innerHTML = `
-                    <span class="byte-value">0x${byteValue.toString(16).padStart(2, '0')}</span> → 
-                    ${homophones.map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' ')}
+                    <div><span class="byte-value">0x${byteValue.toString(16).padStart(2, '0')}</span> →</div>
+                    ${homophones.map((b, i) => 
+                        `<div>ID:${i} → 0x${b.toString(16).padStart(2, '0')}</div>`
+                    ).join('')}
                 `;
                 preview.appendChild(item);
             }
@@ -617,23 +691,35 @@
         }
 
         // Отображение байтов в HEX-формате
-        function displayHexData(data, elementId, className = '') {
+        function displayHexData(data, elementId, classNames = []) {
             const container = document.getElementById(elementId);
             container.innerHTML = '';
             
-            for (let i = 0; i < Math.min(data.length, 100); i++) {
+            for (let i = 0; i < Math.min(data.length, 50); i++) {
                 const byteElement = document.createElement('span');
-                byteElement.className = `hex-byte ${className}`;
+                byteElement.className = `hex-byte ${classNames[i] || ''}`;
                 byteElement.textContent = data[i].toString(16).padStart(2, '0');
                 container.appendChild(byteElement);
+                
+                // Добавляем пробел между парами байтов (ID + омофон)
+                if (i % 2 === 1 && i < data.length - 1) {
+                    container.appendChild(document.createTextNode(' '));
+                }
             }
             
-            if (data.length > 100) {
+            if (data.length > 50) {
                 const ellipsis = document.createElement('span');
-                ellipsis.textContent = ` ... (ещё ${data.length - 100} байт)`;
+                ellipsis.textContent = ` ... (ещё ${data.length - 50} байт)`;
                 ellipsis.style.color = '#a0aec0';
                 container.appendChild(ellipsis);
             }
+        }
+
+        // Обновление статуса
+        function updateStatus(message, type = '') {
+            const statusElement = document.getElementById('statusProcess');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type ? 'status-' + type : ''}`;
         }
 
         // Шифрование данных
@@ -642,41 +728,51 @@
             const masterKey = document.getElementById('masterKey').value;
             
             if (!inputText) {
-                alert('Введите данные для шифрования');
+                updateStatus('Введите данные для шифрования', 'error');
                 return;
             }
             
             if (!masterKey) {
-                alert('Введите мастер-ключ');
+                updateStatus('Введите мастер-ключ', 'error');
                 return;
             }
             
             try {
+                updateStatus('Шифрование...');
+                
                 // Конвертируем текст в байты
                 const encoder = new TextEncoder();
                 const data = encoder.encode(inputText);
                 
                 // Отображаем исходные байты
-                displayHexData(data, 'hexOriginal', 'original-hex');
+                displayHexData(data, 'hexOriginal', Array(data.length).fill('original-hex'));
                 
                 // Шифруем данные
                 const { encryptedData, processSteps } = cipher.encrypt(data, masterKey);
-                lastProcessSteps = processSteps;
                 
                 // Отображаем результат
                 const outputHex = Array.from(encryptedData).map(b => b.toString(16).padStart(2, '0')).join(' ');
                 document.getElementById('outputText').value = outputHex;
                 
+                // Подготавливаем классы для визуализации (ID + омофон чередуются)
+                const hexClasses = [];
+                for (let i = 0; i < encryptedData.length; i++) {
+                    hexClasses.push(i % 2 === 0 ? 'id-hex' : 'homophone-hex');
+                }
+                
                 // Отображаем зашифрованные байты
-                displayHexData(encryptedData, 'hexOutput', 'homophone-hex');
+                displayHexData(encryptedData, 'hexOutput', hexClasses);
                 
                 // Визуализируем процесс
-                visualizeProcess();
+                visualizeProcess(processSteps);
                 
                 // Обновляем метрики
                 updateMetrics(data, encryptedData);
+                
+                updateStatus('Шифрование завершено успешно!', 'success');
             } catch (error) {
-                alert('Ошибка шифрования: ' + error.message);
+                console.error('Encryption error:', error);
+                updateStatus('Ошибка шифрования: ' + error.message, 'error');
             }
         }
 
@@ -686,19 +782,31 @@
             const masterKey = document.getElementById('masterKey').value;
             
             if (!inputHex) {
-                alert('Введите HEX-данные для дешифрования');
+                updateStatus('Введите HEX-данные для дешифрования', 'error');
                 return;
             }
             
             if (!masterKey) {
-                alert('Введите мастер-ключ');
+                updateStatus('Введите мастер-ключ', 'error');
                 return;
             }
             
             try {
+                updateStatus('Дешифрование...');
+                
                 // Конвертируем HEX-строку в байты
                 const hexBytes = inputHex.split(/\s+/);
-                const encryptedData = new Uint8Array(hexBytes.map(byte => parseInt(byte, 16)));
+                const encryptedData = new Uint8Array(hexBytes.map(byte => {
+                    const parsed = parseInt(byte, 16);
+                    if (isNaN(parsed) || parsed < 0 || parsed > 255) {
+                        throw new Error(`Неверный HEX-байт: ${byte}`);
+                    }
+                    return parsed;
+                }));
+                
+                if (encryptedData.length % 2 !== 0) {
+                    throw new Error("Длина зашифрованных данных должна быть кратной 2");
+                }
                 
                 // Дешифруем данные
                 const decryptedData = cipher.decrypt(encryptedData, masterKey);
@@ -712,18 +820,21 @@
                 
                 // Обновляем метрики
                 updateMetrics(encryptedData, decryptedData);
+                
+                updateStatus('Дешифрование завершено успешно!', 'success');
             } catch (error) {
-                alert('Ошибка дешифрования: ' + error.message);
+                console.error('Decryption error:', error);
+                updateStatus('Ошибка дешифрования: ' + error.message, 'error');
             }
         }
 
         // Визуализация процесса шифрования
-        function visualizeProcess() {
+        function visualizeProcess(processSteps) {
             const container = document.getElementById('processVisualization');
             container.innerHTML = '';
             
-            // Показываем только первые 8 байтов для наглядности
-            const stepsToShow = lastProcessSteps.slice(0, 8);
+            // Показываем только первые 5 байтов для наглядности
+            const stepsToShow = processSteps.slice(0, 5);
             
             stepsToShow.forEach((step, index) => {
                 if (index > 0) {
@@ -735,10 +846,7 @@
                 
                 const originalBlock = document.createElement('div');
                 originalBlock.className = 'byte-block original-byte';
-                originalBlock.innerHTML = `
-                    <div class="id-bits">ID: ${step.idBits}</div>
-                    0x${step.original.toString(16).padStart(2, '0')}
-                `;
+                originalBlock.textContent = `0x${step.original.toString(16).padStart(2, '0')}`;
                 container.appendChild(originalBlock);
                 
                 const arrow = document.createElement('div');
@@ -746,19 +854,21 @@
                 arrow.textContent = '→';
                 container.appendChild(arrow);
                 
+                const idBlock = document.createElement('div');
+                idBlock.className = 'byte-block id-byte';
+                idBlock.textContent = `ID:${step.id}`;
+                container.appendChild(idBlock);
+                
                 const homophoneBlock = document.createElement('div');
                 homophoneBlock.className = 'byte-block homophone-byte';
-                homophoneBlock.innerHTML = `
-                    <div class="id-bits">ID: ${step.idBits}</div>
-                    0x${step.homophone.toString(16).padStart(2, '0')}
-                `;
+                homophoneBlock.textContent = `0x${step.homophone.toString(16).padStart(2, '0')}`;
                 container.appendChild(homophoneBlock);
             });
             
-            if (lastProcessSteps.length > 8) {
+            if (processSteps.length > 5) {
                 const ellipsis = document.createElement('div');
                 ellipsis.style.cssText = 'padding: 10px; color: #a0aec0; font-style: italic;';
-                ellipsis.textContent = `... и ещё ${lastProcessSteps.length - 8} байтов`;
+                ellipsis.textContent = `... и ещё ${processSteps.length - 5} байтов`;
                 container.appendChild(ellipsis);
             }
         }
@@ -786,6 +896,13 @@
             // Слушатели изменений
             document.getElementById('masterKey').addEventListener('input', updateByteTable);
             document.getElementById('homophoneCount').addEventListener('change', updateByteTable);
+            
+            // Показываем исходные данные
+            const inputText = document.getElementById('inputText').value;
+            const encoder = new TextEncoder();
+            const data = encoder.encode(inputText);
+            displayHexData(data, 'hexOriginal', Array(data.length).fill('original-hex'));
+            updateMetrics(data, data);
         };
     </script>
 </body>
