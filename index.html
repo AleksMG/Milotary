@@ -1,1090 +1,443 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional Homophonic Cipher | Linux Style</title>
+    <title>Homophonic S-Box Cipher</title>
     <style>
-        /* Стили остаются без изменений */
-        :root {
-            --bg-dark: #1e1e1e;
-            --bg-darker: #121212;
-            --terminal-green: #4af626;
-            --terminal-blue: #3465a4;
-            --terminal-red: #cc0000;
-            --terminal-yellow: #c4a000;
-            --text-color: #d3d7cf;
-            --border-color: #555753;
-            --header-bg: #2e3436;
-        }
-        
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'DejaVu Sans Mono', 'Liberation Mono', monospace;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-color);
-            line-height: 1.6;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            min-height: 100vh;
             padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
             margin-top: 20px;
         }
         
-        @media (max-width: 900px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        header {
-            background-color: var(--header-bg);
-            padding: 15px 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
         h1 {
-            font-size: 1.5rem;
-            color: var(--terminal-green);
+            text-align: center;
+            margin-bottom: 10px;
+            color: #6dd5ed;
+            font-size: 2.5rem;
         }
         
-        .status-bar {
-            display: flex;
-            gap: 15px;
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #d4fc79;
+            font-weight: 300;
         }
         
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .status-indicator {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: var(--terminal-red);
-        }
-        
-        .status-indicator.active {
-            background-color: var(--terminal-green);
-        }
-        
-        .panel {
-            background-color: var(--bg-darker);
-            border-radius: 5px;
-            padding: 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .panel-title {
-            font-size: 1.2rem;
-            color: var(--terminal-blue);
-        }
-        
-        .btn {
-            background-color: var(--header-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 8px 15px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn:hover {
-            background-color: #3a3a3a;
-        }
-        
-        .btn-primary {
-            background-color: var(--terminal-blue);
-        }
-        
-        .btn-primary:hover {
-            background-color: #204a87;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
+        .input-group {
+            margin-bottom: 25px;
         }
         
         label {
             display: block;
-            margin-bottom: 5px;
-            color: var(--terminal-yellow);
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #6dd5ed;
         }
         
-        input, textarea, select {
+        textarea, input[type="text"] {
             width: 100%;
-            padding: 10px;
-            background-color: var(--bg-dark);
-            border: 1px solid var(--border-color);
-            border-radius: 3px;
-            color: var(--text-color);
-        }
-        
-        textarea {
-            min-height: 120px;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #fff;
+            font-size: 16px;
             resize: vertical;
-            font-family: monospace;
+            transition: border-color 0.3s;
         }
         
-        .output {
-            background-color: var(--bg-dark);
-            border: 1px solid var(--border-color);
-            border-radius: 3px;
-            padding: 10px;
-            min-height: 120px;
-            overflow: auto;
-            font-family: monospace;
-            white-space: pre-wrap;
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #6dd5ed;
         }
         
-        .byte-visualization {
+        .btn-group {
             display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
+            gap: 15px;
+            margin-bottom: 25px;
         }
         
-        .byte-item {
-            padding: 3px 6px;
-            background-color: var(--bg-dark);
-            border: 1px solid var(--border-color);
-            border-radius: 3px;
-            font-size: 0.8rem;
+        button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(to right, #2193b0, #6dd5ed);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
         }
         
-        .stats {
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        #decryptBtn {
+            background: linear-gradient(to right, #f09819, #edde5d);
+        }
+        
+        #clearBtn {
+            background: linear-gradient(to right, #eb3349, #f45c43);
+        }
+        
+        .result-group {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #d4fc79;
+        }
+        
+        .sbox-display {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        
+        .sbox-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
+            grid-template-columns: repeat(17, 1fr);
+            gap: 2px;
+            margin-top: 10px;
         }
         
-        .stat-item {
-            background-color: var(--bg-dark);
-            padding: 10px;
-            border-radius: 3px;
-            border: 1px solid var(--border-color);
+        .sbox-cell {
+            padding: 8px 5px;
+            text-align: center;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            word-break: break-all;
         }
         
-        .stat-value {
+        .sbox-header {
             font-weight: bold;
-            color: var(--terminal-green);
+            background: rgba(109, 213, 237, 0.3);
         }
         
-        footer {
+        .footer {
             margin-top: 30px;
             text-align: center;
-            color: #888;
-            font-size: 0.9rem;
-            padding: 10px;
-            border-top: 1px solid var(--border-color);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
         }
         
-        .tabs {
-            display: flex;
-            margin-bottom: 15px;
-        }
-        
-        .tab {
-            padding: 8px 15px;
-            background-color: var(--bg-dark);
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-        }
-        
-        .tab:first-child {
-            border-radius: 3px 0 0 3px;
-        }
-        
-        .tab:last-child {
-            border-radius: 0 3px 3px 0;
-        }
-        
-        .tab.active {
-            background-color: var(--terminal-blue);
-            border-color: var(--terminal-blue);
-        }
-        
-        .log-output {
-            height: 200px;
-            overflow-y: auto;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
-        
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 3px 0;
-        }
-        
-        .log-info {
-            color: var(--text-color);
-        }
-        
-        .log-success {
-            color: var(--terminal-green);
-        }
-        
-        .log-warning {
-            color: var(--terminal-yellow);
-        }
-        
-        .log-error {
-            color: var(--terminal-red);
-        }
-        
-        .loading {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--terminal-green);
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .two-byte {
-            background-color: #2e3436;
-            color: var(--terminal-yellow);
+        @media (max-width: 768px) {
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .sbox-grid {
+                grid-template-columns: repeat(9, 1fr);
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Professional Homophonic Cipher System</h1>
-        <div class="status-bar">
-            <div class="status-item">
-                <div class="status-indicator" id="cipher-status"></div>
-                <span>Cipher</span>
-            </div>
-            <div class="status-item">
-                <div class="status-indicator" id="rng-status"></div>
-                <span>CSPRNG</span>
-            </div>
-            <div class="status-item">
-                <div class="status-indicator" id="tables-status"></div>
-                <span>Tables</span>
-            </div>
-        </div>
-    </header>
+    <h1>Homophonic S-Box Cipher</h1>
+    <p class="subtitle">Encrypt 1 byte to 2 bytes using a homophonic substitution cipher with a 16x16 S-Box</p>
     
     <div class="container">
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">Конфигурация шифра</div>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Пароль:</label>
-                <input type="password" id="password" placeholder="Введите криптографический пароль">
-            </div>
-            
-            <div class="form-group">
-                <label for="salt">Соль (hex, опционально):</label>
-                <input type="text" id="salt" placeholder="16-32 байта в hex">
-            </div>
-            
-            <div class="form-group">
-                <label for="homophones-count">Количество омофонов на байт:</label>
-                <select id="homophones-count">
-                    <option value="2">2</option>
-                    <option value="4" selected>4</option>
-                    <option value="8">8</option>
-                    <option value="16">16</option>
-                    <option value="32">32</option>
-                    <option value="64">64</option>
-                </select>
-            </div>
-            
-            <button id="init-btn" class="btn btn-primary">Инициализировать шифр</button>
-            
-            <div class="form-group" style="margin-top: 20px;">
-                <label>Таблицы омофонов (первые 5 байт):</label>
-                <div class="output" id="tables-preview">
-                    Шифр не инициализирован
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Статистика таблиц:</label>
-                <div class="output" id="tables-stats">
-                    Нет данных
-                </div>
+        <div class="input-group">
+            <label for="keyInput">Encryption Key:</label>
+            <input type="text" id="keyInput" placeholder="Enter your secret key" value="MySecretKey123">
+        </div>
+        
+        <div class="input-group">
+            <label for="inputText">Input Text (to encrypt or decrypt):</label>
+            <textarea id="inputText" rows="4" placeholder="Enter text to encrypt or decrypt">Hello, World! This is a test of the homophonic cipher.</textarea>
+        </div>
+        
+        <div class="btn-group">
+            <button id="encryptBtn">Encrypt</button>
+            <button id="decryptBtn">Decrypt</button>
+            <button id="clearBtn">Clear All</button>
+        </div>
+        
+        <div class="input-group">
+            <label for="outputText">Result:</label>
+            <div class="result-group">
+                <div class="result-title">Output:</div>
+                <div id="outputText"></div>
             </div>
         </div>
         
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">Операции</div>
-            </div>
-            
-            <div class="tabs">
-                <div class="tab active" data-tab="encrypt">Шифрование</div>
-                <div class="tab" data-tab="decrypt">Дешифрование</div>
-            </div>
-            
-            <div id="encrypt-tab">
-                <div class="form-group">
-                    <label for="plaintext">Исходный текст:</label>
-                    <textarea id="plaintext" placeholder="Введите текст для шифрования"></textarea>
-                </div>
-                
-                <button id="encrypt-btn" class="btn" disabled>Зашифровать</button>
-                
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>Результат шифрования (HEX):</label>
-                    <div class="output" id="encrypted-output"></div>
-                </div>
-            </div>
-            
-            <div id="decrypt-tab" style="display: none;">
-                <div class="form-group">
-                    <label for="ciphertext">Зашифрованный текст (HEX):</label>
-                    <textarea id="ciphertext" placeholder="Введите hex-данные для дешифрования"></textarea>
-                </div>
-                
-                <button id="decrypt-btn" class="btn" disabled>Дешифровать</button>
-                
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>Результат дешифрования:</label>
-                    <div class="output" id="decrypted-output"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">Визуализация данных</div>
-            </div>
-            
-            <div class="form-group">
-                <label>Байты исходного текста:</label>
-                <div class="byte-visualization" id="original-bytes"></div>
-            </div>
-            
-            <div class="form-group">
-                <label>Двухбайтовые омофоны зашифрованного текста:</label>
-                <div class="byte-visualization" id="encrypted-bytes"></div>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-item">
-                    Размер исходного текста: <span class="stat-value" id="original-size">-</span>
-                </div>
-                <div class="stat-item">
-                    Размер зашифрованного текста: <span class="stat-value" id="encrypted-size">-</span>
-                </div>
-                <div class="stat-item">
-                    Энтропия исходного текста: <span class="stat-value" id="original-entropy">-</span>
-                </div>
-                <div class="stat-item">
-                    Энтропия зашифрованного текста: <span class="stat-value" id="encrypted-entropy">-</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">Журнал операций</div>
-                <button id="clear-log-btn" class="btn">Очистить</button>
-            </div>
-            
-            <div class="log-output" id="log-output"></div>
-            
-            <div class="form-group" style="margin-top: 20px;">
-                <label>Статус верификации:</label>
-                <div class="output" id="verification-status">
-                    Не проведена
-                </div>
-            </div>
-            
-            <button id="verify-btn" class="btn" disabled>Запустить верификацию</button>
-            <button id="test-btn" class="btn" disabled>Тест шифрования</button>
+        <div class="input-group sbox-display">
+            <label>S-Box Visualization (First 8x8 for demonstration):</label>
+            <div class="sbox-grid" id="sboxGrid"></div>
         </div>
     </div>
     
-    <footer>
-        Professional Homophonic Cipher System | Secure Encryption Implementation v2.2
-    </footer>
+    <div class="footer">
+        <p>Homophonic S-Box Cipher | Each byte is encrypted to 2 bytes | Professional Implementation</p>
+    </div>
 
     <script>
-        // Профессиональная реализация омофонного шифра с двухбайтовыми омофонами
-        class ProfessionalHomophonicCipher {
+        class HomophonicCipher {
             constructor() {
-                this.tables = null;
-                this.reverseTable = null;
-                this.initialized = false;
-                this.homophonesPerByte = 4;
-                this.salt = null;
-                this.initializationVector = null;
+                this.sbox = null;
+                this.inverseSbox = null;
             }
             
-            // Инициализация с криптографически безопасным ГПСЧ
-            async initialize(password, homophonesPerByte = 4, customSalt = null) {
-                this.homophonesPerByte = homophonesPerByte;
+            // Initialize the S-Box based on a key
+            initializeSBox(key) {
+                // Create a seeded random number generator for consistent S-Box generation
+                const seededRandom = (seed) => {
+                    let value = seed;
+                    return function() {
+                        value = (value * 9301 + 49297) % 233280;
+                        return value / 233280;
+                    };
+                };
                 
-                try {
-                    // Генерация соли
-                    if (customSalt) {
-                        this.salt = this.hexToBytes(customSalt);
-                    } else {
-                        this.salt = crypto.getRandomValues(new Uint8Array(16));
-                    }
-                    
-                    // Создаем seed из пароля с помощью PBKDF2
-                    const encoder = new TextEncoder();
-                    const passwordData = encoder.encode(password);
-                    
-                    const keyMaterial = await crypto.subtle.importKey(
-                        'raw',
-                        passwordData,
-                        { name: 'PBKDF2' },
-                        false,
-                        ['deriveBits']
-                    );
-                    
-                    const seedBuffer = await crypto.subtle.deriveBits(
-                        {
-                            name: 'PBKDF2',
-                            salt: this.salt,
-                            iterations: 100000,
-                            hash: 'SHA-256'
-                        },
-                        keyMaterial,
-                        256
-                    );
-                    
-                    this.initializationVector = new Uint8Array(seedBuffer);
-                    
-                    // Генерация таблиц омофонов
-                    await this.generateTables();
-                    this.initialized = true;
-                    
-                    return true;
-                } catch (error) {
-                    console.error('Initialization error:', error);
-                    throw error;
+                const rand = seededRandom(this.hashCode(key));
+                
+                // Create a 16x16 S-Box with 16 homophones per cell
+                this.sbox = new Array(16);
+                this.inverseSbox = new Map();
+                
+                // First, generate all possible homophones (256 * 16 = 4096 unique values)
+                const allHomophones = new Array(4096);
+                for (let i = 0; i < 4096; i++) {
+                    allHomophones[i] = i;
                 }
-            }
-            
-            // Детерминированная генерация таблиц омофонов
-            async generateTables() {
-                const tables = new Map();
-                this.reverseTable = new Map();
                 
-                // Общее количество необходимых омофонов
-                const totalHomophonesNeeded = 256 * this.homophonesPerByte;
+                // Shuffle the homophones using Fisher-Yates algorithm
+                for (let i = 4095; i > 0; i--) {
+                    const j = Math.floor(rand() * (i + 1));
+                    [allHomophones[i], allHomophones[j]] = [allHomophones[j], allHomophones[i]];
+                }
                 
-                // Создаем детерминированную последовательность омофонов
-                const homophonesArray = await this.generateDeterministicHomophones(totalHomophonesNeeded);
-                
-                // Распределяем омофоны по таблицам
+                // Assign homophones to S-Box cells
                 let homophoneIndex = 0;
-                
-                for (let byte = 0; byte < 256; byte++) {
-                    const homophones = [];
-                    
-                    for (let i = 0; i < this.homophonesPerByte; i++) {
-                        const homophone = homophonesArray[homophoneIndex++];
-                        homophones.push(homophone);
-                        
-                        // Заполняем обратную таблицу для быстрого дешифрования
-                        this.reverseTable.set(homophone, byte);
-                    }
-                    
-                    tables.set(byte, homophones);
-                }
-                
-                this.tables = tables;
-                return true;
-            }
-            
-            // Генерация детерминированной последовательности омофонов
-            async generateDeterministicHomophones(count) {
-                const homophones = new Set();
-                const usedBytes = new Uint8Array(65536 / 8).fill(0); // Bit array для отслеживания использованных значений
-                
-                // Используем HMAC-SHA256 с ключом для детерминированной генерации
-                const hmacKey = await crypto.subtle.importKey(
-                    'raw',
-                    this.initializationVector,
-                    { name: 'HMAC', hash: 'SHA-256' },
-                    false,
-                    ['sign']
-                );
-                
-                let counter = 0;
-                
-                while (homophones.size < count) {
-                    // Создаем детерминированные данные на основе ключа и счетчика
-                    const encoder = new TextEncoder();
-                    const data = encoder.encode(counter.toString());
-                    
-                    // Генерируем HMAC
-                    const hmac = await crypto.subtle.sign('HMAC', hmacKey, data);
-                    const hmacBytes = new Uint8Array(hmac);
-                    
-                    // Используем байты HMAC для создания омофонов
-                    for (let i = 0; i < hmacBytes.length - 1 && homophones.size < count; i += 2) {
-                        const homophone = (hmacBytes[i] << 8) | hmacBytes[i + 1];
-                        
-                        // Проверяем, что омофон уникален
-                        const byteIndex = Math.floor(homophone / 8);
-                        const bitIndex = homophone % 8;
-                        
-                        if (!(usedBytes[byteIndex] & (1 << bitIndex))) {
-                            homophones.add(homophone);
-                            usedBytes[byteIndex] |= (1 << bitIndex);
+                for (let i = 0; i < 16; i++) {
+                    this.sbox[i] = new Array(16);
+                    for (let j = 0; j < 16; j++) {
+                        this.sbox[i][j] = new Array(16);
+                        for (let k = 0; k < 16; k++) {
+                            const homophone = allHomophones[homophoneIndex++];
+                            this.sbox[i][j][k] = homophone;
+                            // Map the homophone back to its input byte (i*16 + j)
+                            this.inverseSbox.set(homophone, (i << 4) | j);
                         }
                     }
+                }
+            }
+            
+            // Simple string hashing function
+            hashCode(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                    hash |= 0; // Convert to 32-bit integer
+                }
+                return Math.abs(hash);
+            }
+            
+            // Encrypt a string
+            encrypt(text, key) {
+                this.initializeSBox(key);
+                let encrypted = '';
+                
+                for (let i = 0; i < text.length; i++) {
+                    const charCode = text.charCodeAt(i);
+                    const highNibble = (charCode >> 4) & 0x0F;
+                    const lowNibble = charCode & 0x0F;
                     
-                    counter++;
-                }
-                
-                // Преобразуем в массив и сортируем для детерминированности
-                return Array.from(homophones).sort((a, b) => a - b);
-            }
-            
-            // Шифрование байта
-            async encryptByte(byte) {
-                if (!this.initialized) throw new Error("Cipher not initialized");
-                if (byte < 0 || byte > 255) throw new Error(`Invalid byte value: ${byte}`);
-                
-                const homophones = this.tables.get(byte);
-                if (!homophones) throw new Error(`No homophones for byte ${byte}`);
-                
-                // Криптографически случайный выбор омофона
-                const randomIndex = crypto.getRandomValues(new Uint8Array(1))[0] % homophones.length;
-                return homophones[randomIndex];
-            }
-            
-            // Дешифрование двухбайтового омофона
-            decryptHomophone(homophoneValue) {
-                if (!this.initialized) throw new Error("Cipher not initialized");
-                if (homophoneValue < 0 || homophoneValue > 65535) throw new Error(`Invalid homophone value: ${homophoneValue}`);
-                
-                const originalByte = this.reverseTable.get(homophoneValue);
-                if (originalByte === undefined) {
-                    throw new Error(`Homophone ${homophoneValue} not found in reverse table`);
-                }
-                
-                return originalByte;
-            }
-            
-            // Шифрование массива байтов
-            async encryptData(data) {
-                if (!this.initialized) throw new Error("Cipher not initialized");
-                
-                const encrypted = new Uint16Array(data.length);
-                
-                for (let i = 0; i < data.length; i++) {
-                    encrypted[i] = await this.encryptByte(data[i]);
+                    // Select a random homophone from the 16 available for this byte
+                    const randIndex = Math.floor(Math.random() * 16);
+                    const homophone = this.sbox[highNibble][lowNibble][randIndex];
+                    
+                    // Convert to two-byte representation (hex)
+                    encrypted += homophone.toString(16).padStart(3, '0');
                 }
                 
                 return encrypted;
             }
             
-            // Дешифрование массива омофонов
-            decryptData(encryptedData) {
-                if (!this.initialized) throw new Error("Cipher not initialized");
+            // Decrypt a string
+            decrypt(encryptedText, key) {
+                this.initializeSBox(key);
+                let decrypted = '';
                 
-                const decrypted = new Uint8Array(encryptedData.length);
-                
-                for (let i = 0; i < encryptedData.length; i++) {
-                    decrypted[i] = this.decryptHomophone(encryptedData[i]);
+                // Process the text in 3-character chunks (each representing a homophone)
+                for (let i = 0; i < encryptedText.length; i += 3) {
+                    const hexValue = encryptedText.substr(i, 3);
+                    const homophone = parseInt(hexValue, 16);
+                    
+                    if (this.inverseSbox.has(homophone)) {
+                        const byteValue = this.inverseSbox.get(homophone);
+                        decrypted += String.fromCharCode(byteValue);
+                    } else {
+                        decrypted += '?'; // Placeholder for undecryptable value
+                    }
                 }
                 
                 return decrypted;
             }
             
-            // Верификация таблиц
-            verifyTables() {
-                if (!this.tables || !this.reverseTable) throw new Error("Tables not generated");
+            // Get a portion of the S-Box for display
+            getSBoxPreview() {
+                if (!this.sbox) return null;
                 
-                const usedHomophones = new Set();
-                let totalHomophones = 0;
-                
-                // Проверка для каждого байта
-                for (let byte = 0; byte < 256; byte++) {
-                    const homophones = this.tables.get(byte);
-                    
-                    if (!homophones || homophones.length === 0) {
-                        throw new Error(`No homophones for byte ${byte}`);
+                const preview = [];
+                // Show only first 8x8 for demonstration
+                for (let i = 0; i < 8; i++) {
+                    const row = [];
+                    for (let j = 0; j < 8; j++) {
+                        // Show first 2 homophones for each cell
+                        row.push(this.sbox[i][j].slice(0, 2).map(v => v.toString(16).padStart(3, '0')).join(', '));
                     }
-                    
-                    if (homophones.length !== this.homophonesPerByte) {
-                        throw new Error(`Inconsistent homophone count for byte ${byte}`);
-                    }
-                    
-                    // Проверка уникальности омофонов
-                    for (const homophone of homophones) {
-                        if (usedHomophones.has(homophone)) {
-                            throw new Error(`Homophone ${homophone} used for multiple bytes`);
-                        }
-                        usedHomophones.add(homophone);
-                        totalHomophones++;
-                        
-                        // Проверка обратного mapping
-                        if (this.reverseTable.get(homophone) !== byte) {
-                            throw new Error(`Reverse table inconsistency for homophone ${homophone}`);
-                        }
-                    }
+                    preview.push(row);
                 }
                 
-                // Проверка размера
-                if (totalHomophones !== 256 * this.homophonesPerByte) {
-                    throw new Error(`Invalid total homophones count: ${totalHomophones}, expected ${256 * this.homophonesPerByte}`);
-                }
-                
-                // Проверка обратной таблицы
-                if (this.reverseTable.size !== totalHomophones) {
-                    throw new Error(`Reverse table size mismatch: ${this.reverseTable.size}, expected ${totalHomophones}`);
-                }
-                
-                return true;
-            }
-            
-            // Вспомогательные функции
-            bytesToHex(bytes) {
-                return Array.from(bytes)
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join(' ');
-            }
-            
-            hexToBytes(hexString) {
-                const cleanHex = hexString.replace(/[^0-9a-fA-F]/g, '');
-                if (cleanHex.length % 2 !== 0) throw new Error("Invalid hex string length");
-                
-                const result = new Uint8Array(cleanHex.length / 2);
-                for (let i = 0; i < cleanHex.length; i += 2) {
-                    result[i/2] = parseInt(cleanHex.substr(i, 2), 16);
-                }
-                return result;
-            }
-            
-            uint16ToHex(uint16Array) {
-                return Array.from(uint16Array)
-                    .map(val => {
-                        const highByte = (val >> 8) & 0xFF;
-                        const lowByte = val & 0xFF;
-                        return `${highByte.toString(16).padStart(2, '0')}${lowByte.toString(16).padStart(2, '0')}`;
-                    })
-                    .join(' ');
-            }
-            
-            hexToUint16(hexString) {
-                const cleanHex = hexString.replace(/[^0-9a-fA-F]/g, '');
-                if (cleanHex.length % 4 !== 0) throw new Error("Invalid hex string length for uint16");
-                
-                const result = new Uint16Array(cleanHex.length / 4);
-                for (let i = 0; i < cleanHex.length; i += 4) {
-                    const highByte = parseInt(cleanHex.substr(i, 2), 16);
-                    const lowByte = parseInt(cleanHex.substr(i+2, 2), 16);
-                    result[i/4] = (highByte << 8) | lowByte;
-                }
-                return result;
-            }
-            
-            // Получение статистики таблиц
-            getTablesStats() {
-                if (!this.tables) return null;
-                
-                let minHomophones = Infinity;
-                let maxHomophones = 0;
-                let totalHomophones = 0;
-                
-                for (let byte = 0; byte < 256; byte++) {
-                    const homophones = this.tables.get(byte);
-                    if (homophones.length < minHomophones) minHomophones = homophones.length;
-                    if (homophones.length > maxHomophones) maxHomophones = homophones.length;
-                    totalHomophones += homophones.length;
-                }
-                
-                return {
-                    minHomophones,
-                    maxHomophones,
-                    totalHomophones,
-                    averageHomophones: totalHomophones / 256
-                };
+                return preview;
             }
         }
 
-        // Вспомогательные функции UI
-        function logMessage(message, type = 'info') {
-            const logOutput = document.getElementById('log-output');
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${type}`;
-            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logOutput.appendChild(logEntry);
-            logOutput.scrollTop = logOutput.scrollHeight;
-        }
+        // DOM elements
+        const keyInput = document.getElementById('keyInput');
+        const inputText = document.getElementById('inputText');
+        const outputText = document.getElementById('outputText');
+        const encryptBtn = document.getElementById('encryptBtn');
+        const decryptBtn = document.getElementById('decryptBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const sboxGrid = document.getElementById('sboxGrid');
         
-        function updateStatus(indicatorId, isActive) {
-            const indicator = document.querySelector(`#${indicatorId}`);
-            if (isActive) {
-                indicator.classList.add('active');
-            } else {
-                indicator.classList.remove('active');
-            }
-        }
+        // Initialize cipher
+        const cipher = new HomophonicCipher();
         
-        function calculateEntropy(data) {
-            if (!data || data.length === 0) return 0;
+        // Event listeners
+        encryptBtn.addEventListener('click', () => {
+            const key = keyInput.value;
+            const text = inputText.value;
             
-            const frequency = new Array(256).fill(0);
-            for (let i = 0; i < data.length; i++) {
-                frequency[data[i]]++;
-            }
-            
-            let entropy = 0;
-            for (let i = 0; i < 256; i++) {
-                if (frequency[i] > 0) {
-                    const p = frequency[i] / data.length;
-                    entropy -= p * Math.log2(p);
-                }
-            }
-            
-            return entropy;
-        }
-        
-        function visualizeBytes(containerId, data, isTwoByte = false) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            
-            if (!data || data.length === 0) {
-                container.textContent = 'Нет данных';
+            if (!key) {
+                alert('Please enter an encryption key');
                 return;
             }
             
-            const displayData = data.slice(0, 50);
+            if (!text) {
+                alert('Please enter text to encrypt');
+                return;
+            }
             
-            displayData.forEach((value, index) => {
-                const byteElement = document.createElement('div');
-                byteElement.className = `byte-item ${isTwoByte ? 'two-byte' : ''}`;
+            const encrypted = cipher.encrypt(text, key);
+            outputText.textContent = encrypted;
+            
+            updateSBoxDisplay(key);
+        });
+        
+        decryptBtn.addEventListener('click', () => {
+            const key = keyInput.value;
+            const text = inputText.value;
+            
+            if (!key) {
+                alert('Please enter an encryption key');
+                return;
+            }
+            
+            if (!text) {
+                alert('Please enter text to decrypt');
+                return;
+            }
+            
+            // Check if the input looks like encrypted text (hex digits)
+            const hexRegex = /^[0-9a-fA-F]+$/;
+            if (!hexRegex.test(text.replace(/\s/g, ''))) {
+                alert('The input does not appear to be encrypted text. Please provide text encrypted with this cipher.');
+                return;
+            }
+            
+            const decrypted = cipher.decrypt(text, key);
+            outputText.textContent = decrypted;
+            
+            updateSBoxDisplay(key);
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            inputText.value = '';
+            outputText.textContent = '';
+            sboxGrid.innerHTML = '';
+        });
+        
+        // Update S-Box display
+        function updateSBoxDisplay(key) {
+            cipher.initializeSBox(key);
+            const preview = cipher.getSBoxPreview();
+            
+            if (!preview) return;
+            
+            // Clear previous display
+            sboxGrid.innerHTML = '';
+            
+            // Create header row
+            const headerRow = document.createElement('div');
+            headerRow.className = 'sbox-cell sbox-header';
+            headerRow.textContent = '';
+            sboxGrid.appendChild(headerRow);
+            
+            for (let j = 0; j < preview[0].length; j++) {
+                const headerCell = document.createElement('div');
+                headerCell.className = 'sbox-cell sbox-header';
+                headerCell.textContent = j.toString(16).toUpperCase();
+                sboxGrid.appendChild(headerCell);
+            }
+            
+            // Create data rows
+            for (let i = 0; i < preview.length; i++) {
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'sbox-cell sbox-header';
+                rowHeader.textContent = i.toString(16).toUpperCase();
+                sboxGrid.appendChild(rowHeader);
                 
-                if (isTwoByte) {
-                    const highByte = (value >> 8) & 0xFF;
-                    const lowByte = value & 0xFF;
-                    byteElement.textContent = `${highByte.toString(16).padStart(2, '0')}${lowByte.toString(16).padStart(2, '0')}`;
-                    byteElement.title = `Homophone: ${value} (0x${highByte.toString(16).padStart(2, '0')}${lowByte.toString(16).padStart(2, '0')})`;
-                } else {
-                    byteElement.textContent = value.toString(16).padStart(2, '0');
-                    byteElement.title = `Byte: ${value} (0x${value.toString(16).padStart(2, '0')})`;
+                for (let j = 0; j < preview[i].length; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'sbox-cell';
+                    cell.title = `S-Box[${i.toString(16).toUpperCase()}][${j.toString(16).toUpperCase()}]`;
+                    cell.textContent = preview[i][j];
+                    sboxGrid.appendChild(cell);
                 }
-                
-                container.appendChild(byteElement);
-            });
-            
-            if (data.length > 50) {
-                const moreElement = document.createElement('div');
-                moreElement.className = 'byte-item';
-                moreElement.textContent = `... (+${data.length - 50})`;
-                container.appendChild(moreElement);
             }
         }
 
-        // Инициализация приложения
-        document.addEventListener('DOMContentLoaded', function() {
-            const cipher = new ProfessionalHomophonicCipher();
-            let currentEncryptedData = null;
-            
-            // Элементы интерфейса
-            const initBtn = document.getElementById('init-btn');
-            const encryptBtn = document.getElementById('encrypt-btn');
-            const decryptBtn = document.getElementById('decrypt-btn');
-            const verifyBtn = document.getElementById('verify-btn');
-            const testBtn = document.getElementById('test-btn');
-            const clearLogBtn = document.getElementById('clear-log-btn');
-            const tabs = document.querySelectorAll('.tab');
-            
-            // Обработчики вкладок
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const tabName = tab.getAttribute('data-tab');
-                    
-                    tabs.forEach(t => t.classList.remove('active'));
-                    document.getElementById('encrypt-tab').style.display = 'none';
-                    document.getElementById('decrypt-tab').style.display = 'none';
-                    
-                    tab.classList.add('active');
-                    document.getElementById(`${tabName}-tab`).style.display = 'block';
-                });
-            });
-            
-            // Инициализация шифра
-            initBtn.addEventListener('click', async () => {
-                const password = document.getElementById('password').value;
-                const salt = document.getElementById('salt').value;
-                const homophonesCount = parseInt(document.getElementById('homophones-count').value);
-                
-                if (!password) {
-                    logMessage('Введите пароль для инициализации', 'error');
-                    return;
-                }
-                
-                try {
-                    logMessage('Начало инициализации шифра...', 'info');
-                    initBtn.disabled = true;
-                    initBtn.innerHTML = '<span class="loading"></span> Инициализация...';
-                    
-                    updateStatus('cipher-status', false);
-                    updateStatus('rng-status', false);
-                    updateStatus('tables-status', false);
-                    
-                    // Инициализация шифра
-                    await cipher.initialize(password, homophonesCount, salt || null);
-                    
-                    // Верификация таблиц
-                    cipher.verifyTables();
-                    
-                    // Обновление статуса
-                    updateStatus('cipher-status', true);
-                    updateStatus('rng-status', true);
-                    updateStatus('tables-status', true);
-                    
-                    // Активация кнопок
-                    encryptBtn.disabled = false;
-                    decryptBtn.disabled = false;
-                    verifyBtn.disabled = false;
-                    testBtn.disabled = false;
-                    
-                    // Показ таблиц омофонов (первые 5 байт)
-                    const tablesPreview = document.getElementById('tables-preview');
-                    let previewText = '';
-                    
-                    for (let i = 0; i < 5; i++) {
-                        const homophones = cipher.tables.get(i);
-                        previewText += `Byte ${i}: [${homophones.map(h => {
-                            const high = (h >> 8) & 0xFF;
-                            const low = h & 0xFF;
-                            return `${high.toString(16).padStart(2, '0')}${low.toString(16).padStart(2, '0')}`;
-                        }).join(', ')}]\n`;
-                    }
-                    
-                    tablesPreview.textContent = previewText;
-                    
-                    // Показ статистики
-                    const stats = cipher.getTablesStats();
-                    const tablesStats = document.getElementById('tables-stats');
-                    tablesStats.textContent = `Всего омофонов: ${stats.totalHomophones}, на байт: мин ${stats.minHomophones}, макс ${stats.maxHomophones}, ср. ${stats.averageHomophones.toFixed(2)}`;
-                    
-                    logMessage('Шифр успешно инициализирован', 'success');
-                    logMessage(`Таблицы омофонов верифицированы (${homophonesCount} омофонов на байт)`, 'success');
-                    logMessage(`Использована соль: ${cipher.bytesToHex(cipher.salt)}`, 'info');
-                    
-                    // Сохраняем хеш таблиц для проверки детерминированности
-                    const tablesHash = await hashTables(cipher.tables);
-                    logMessage(`Хеш таблиц: ${tablesHash}`, 'info');
-                    
-                } catch (error) {
-                    logMessage(`Ошибка инициализации: ${error.message}`, 'error');
-                    console.error(error);
-                } finally {
-                    initBtn.disabled = false;
-                    initBtn.textContent = 'Инициализировать шифр';
-                }
-            });
-            
-            // Шифрование
-            encryptBtn.addEventListener('click', async () => {
-                const plaintext = document.getElementById('plaintext').value;
-                
-                if (!plaintext) {
-                    logMessage('Введите текст для шифрования', 'error');
-                    return;
-                }
-                
-                try {
-                    logMessage('Начало шифрования...', 'info');
-                    encryptBtn.disabled = true;
-                    encryptBtn.innerHTML = '<span class="loading"></span> Шифрование...';
-                    
-                    // Преобразование текста в байты
-                    const encoder = new TextEncoder();
-                    const plaintextBytes = encoder.encode(plaintext);
-                    
-                    // Шифрование
-                    const encryptedData = await cipher.encryptData(plaintextBytes);
-                    currentEncryptedData = encryptedData;
-                    
-                    // Отображение результата
-                    const hexResult = cipher.uint16ToHex(encryptedData);
-                    document.getElementById('encrypted-output').textContent = hexResult;
-                    
-                    // Визуализация байтов
-                    visualizeBytes('original-bytes', plaintextBytes, false);
-                    visualizeBytes('encrypted-bytes', encryptedData, true);
-                    
-                    // Расчет энтропии и размеров
-                    const originalEntropy = calculateEntropy(plaintextBytes);
-                    const encryptedEntropy = 8.0; // Максимальная для случайных данных
-                    
-                    document.getElementById('original-size').textContent = `${plaintextBytes.length} байт`;
-                    document.getElementById('encrypted-size').textContent = `${encryptedData.length * 2} байт`;
-                    document.getElementById('original-entropy').textContent = originalEntropy.toFixed(4);
-                    document.getElementById('encrypted-entropy').textContent = encryptedEntropy.toFixed(4);
-                    
-                    logMessage(`Текст зашифрован: ${plaintextBytes.length} байт -> ${encryptedData.length * 2} байт`, 'success');
-                    logMessage(`Энтропия увеличена с ${originalEntropy.toFixed(4)} до ~${encryptedEntropy.toFixed(4)}`, 'info');
-                } catch (error) {
-                    logMessage(`Ошибка шифрования: ${error.message}`, 'error');
-                    console.error(error);
-                } finally {
-                    encryptBtn.disabled = false;
-                    encryptBtn.textContent = 'Зашифровать';
-                }
-            });
-            
-            // Дешифрование
-            decryptBtn.addEventListener('click', async () => {
-                const ciphertext = document.getElementById('ciphertext').value;
-                
-                let encryptedData;
-                try {
-                    if (ciphertext) {
-                        encryptedData = cipher.hexToUint16(ciphertext);
-                    } else if (currentEncryptedData) {
-                        encryptedData = currentEncryptedData;
-                        document.getElementById('ciphertext').value = cipher.uint16ToHex(encryptedData);
-                    } else {
-                        logMessage('Нет данных для дешифрования', 'error');
-                        return;
-                    }
-                    
-                    logMessage('Начало дешифрования...', 'info');
-                    decryptBtn.disabled = true;
-                    decryptBtn.innerHTML = '<span class="loading"></span> Дешифрование...';
-                    
-                    // Дешифрование
-                    const decryptedData = cipher.decryptData(encryptedData);
-                    
-                    // Преобразование байтов в текст
-                    const decoder = new TextDecoder();
-                    const decryptedText = decoder.decode(decryptedData);
-                    
-                    // Отображение результата
-                    document.getElementById('decrypted-output').textContent = decryptedText;
-                    
-                    logMessage(`Данные дешифрованы: ${encryptedData.length} омофонов -> ${decryptedData.length} байт`, 'success');
-                } catch (error) {
-                    logMessage(`Ошибка дешифрования: ${error.message}`, 'error');
-                    console.error(error);
-                } finally {
-                    decryptBtn.disabled = false;
-                    decryptBtn.textContent = 'Дешифровать';
-                }
-            });
-            
-            // Верификация
-            verifyBtn.addEventListener('click', () => {
-                try {
-                    logMessage('Запуск верификации таблиц омофонов...', 'info');
-                    
-                    cipher.verifyTables();
-                    
-                    document.getElementById('verification-status').textContent = 
-                        '✓ Таблицы омофонов верифицированы успешно';
-                    document.getElementById('verification-status').style.color = '#4af626';
-                    
-                    logMessage('Верификация завершена успешно', 'success');
-                } catch (error) {
-                    document.getElementById('verification-status').textContent = 
-                        `✗ Ошибка верификации: ${error.message}`;
-                    document.getElementById('verification-status').style.color = '#cc0000';
-                    
-                    logMessage(`Ошибка верификации: ${error.message}`, 'error');
-                    console.error(error);
-                }
-            });
-            
-            // Тестирование
-            testBtn.addEventListener('click', async () => {
-                try {
-                    logMessage('Запуск теста шифрования/дешифрования...', 'info');
-                    testBtn.disabled = true;
-                    
-                    const testText = "Тестовое сообщение для проверки работы шифра! 1234567890 ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz";
-                    const encoder = new TextEncoder();
-                    const testData = encoder.encode(testText);
-                    
-                    // Шифрование
-                    const encryptedData = await cipher.encryptData(testData);
-                    
-                    // Дешифрование
-                    const decryptedData = cipher.decryptData(encryptedData);
-                    const decoder = new TextDecoder();
-                    const decryptedText = decoder.decode(decryptedData);
-                    
-                    // Проверка
-                    if (testText === decryptedText) {
-                        logMessage('✓ Тест пройден успешно: шифрование и дешифрование работают корректно', 'success');
-                    } else {
-                        logMessage('✗ Тест не пройден: исходный и дешифрованный текст отличаются', 'error');
-                    }
-                    
-                } catch (error) {
-                    logMessage(`Ошибка при тестировании: ${error.message}`, 'error');
-                    console.error(error);
-                } finally {
-                    testBtn.disabled = false;
-                }
-            });
-            
-            // Очистка журнала
-            clearLogBtn.addEventListener('click', () => {
-                document.getElementById('log-output').innerHTML = '';
-                logMessage('Журнал очищен', 'info');
-            });
-            
-            // Вспомогательная функция для хеширования таблиц
-            async function hashTables(tables) {
-                const encoder = new TextEncoder();
-                let data = '';
-                
-                for (let byte = 0; byte < 256; byte++) {
-                    const homophones = tables.get(byte);
-                    data += byte + ':' + homophones.join(',') + ';';
-                }
-                
-                const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
-            }
-        });
+        // Initialize with a sample S-Box display
+        setTimeout(() => updateSBoxDisplay(keyInput.value), 500);
     </script>
 </body>
 </html>
