@@ -297,6 +297,25 @@
             border-radius: 0.5rem;
             border: 1px solid var(--border);
         }
+
+        .test-result {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            background: rgba(15, 23, 42, 0.4);
+        }
+        
+        .test-pass {
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .test-fail {
+            border-left: 4px solid var(--danger);
+        }
+        
+        .test-warning {
+            border-left: 4px solid var(--warning);
+        }
     </style>
 </head>
 <body>
@@ -414,6 +433,19 @@
                     <span class="result-title">Output Preview:</span>
                 </div>
                 <div id="outputPreview" class="result-content"></div>
+            </div>
+        </div>
+
+        <!-- ==================== NEW TESTING SECTION ==================== -->
+        <div class="card">
+            <h2 class="card-title">🔬 Automatic Cryptographic Tests</h2>
+            
+            <div class="result-container">
+                <div class="result-header">
+                    <span class="result-title">Test Results:</span>
+                    <span id="testStatus" class="status-ready">Ready to test</span>
+                </div>
+                <div id="testResults" class="result-content"></div>
             </div>
         </div>
 
@@ -764,6 +796,132 @@
             }
         }
 
+        // ==================== CRYPTOGRAPHIC TEST SUITE ====================
+        class CipherTestSuite {
+            static calculateEntropy(data) {
+                const freq = {};
+                for (const char of data) {
+                    freq[char] = (freq[char] || 0) + 1;
+                }
+                let entropy = 0;
+                const total = data.length;
+                for (const char in freq) {
+                    const p = freq[char] / total;
+                    entropy -= p * Math.log2(p);
+                }
+                return entropy;
+            }
+
+            static frequencyAnalysis(data, topN = 20) {
+                const freq = {};
+                for (const char of data) {
+                    freq[char] = (freq[char] || 0) + 1;
+                }
+                
+                const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+                
+                let report = `Total characters: ${data.length}\nUnique characters: ${sorted.length}\n\nTop ${topN} most frequent:\n`;
+                for (let i = 0; i < Math.min(topN, sorted.length); i++) {
+                    const [char, count] = sorted[i];
+                    const percentage = (count / data.length * 100).toFixed(3);
+                    report += `'${char}': ${count} (${percentage}%)\n`;
+                }
+                return report;
+            }
+
+            static async runAvalancheTest(cipher, sampleText, key, outputFormat) {
+                await cipher.initializeWithKey(key);
+                const originalResult = await cipher.encryptData(sampleText, 'cbc');
+                
+                const modifiedText = sampleText.slice(0, -1) + 
+                    String.fromCharCode(sampleText.charCodeAt(sampleText.length - 1) ^ 1);
+                
+                const modifiedResult = await cipher.encryptData(modifiedText, 'cbc');
+                
+                let difference = 0;
+                const minLength = Math.min(originalResult.length, modifiedResult.length);
+                
+                for (let i = 0; i < minLength; i++) {
+                    if (originalResult[i] !== modifiedResult[i]) {
+                        difference++;
+                    }
+                }
+                
+                const differencePercentage = (difference / minLength * 100).toFixed(2);
+                return differencePercentage;
+            }
+
+            static testRandomness(data) {
+                if (data.length < 100) return "Insufficient data for randomness test";
+                
+                const byteValues = [];
+                if (typeof data === 'string') {
+                    for (let i = 0; i < data.length; i++) {
+                        byteValues.push(data.charCodeAt(i));
+                    }
+                } else if (data instanceof Uint8Array) {
+                    byteValues.push(...data);
+                }
+                
+                // Simple randomness tests
+                let sum = 0;
+                for (const byte of byteValues) {
+                    sum += byte;
+                }
+                const mean = sum / byteValues.length;
+                
+                let variance = 0;
+                for (const byte of byteValues) {
+                    variance += Math.pow(byte - mean, 2);
+                }
+                variance /= byteValues.length;
+                
+                return {
+                    mean: mean.toFixed(2),
+                    variance: variance.toFixed(2),
+                    idealMean: 127.5,
+                    idealVariance: 5461.25 // Variance of uniform distribution 0-255
+                };
+            }
+
+            static runAllTests(encryptedData, cipher, originalText, key, outputFormat) {
+                const results = [];
+                
+                // Test 1: Entropy Test
+                const entropy = this.calculateEntropy(encryptedData);
+                results.push({
+                    name: "Entropy Test",
+                    status: entropy > 7.9 ? "PASS" : "WARNING",
+                    message: `Entropy: ${entropy.toFixed(6)}/8.000000 ${entropy > 7.9 ? "✓" : "⚠"}`,
+                    details: `Ideal: >7.9 (perfect randomness)`
+                });
+                
+                // Test 2: Frequency Analysis
+                const freqReport = this.frequencyAnalysis(encryptedData);
+                const uniqueChars = new Set(encryptedData).size;
+                results.push({
+                    name: "Frequency Distribution",
+                    status: uniqueChars > 100 ? "PASS" : "WARNING",
+                    message: `Unique characters: ${uniqueChars} ${uniqueChars > 100 ? "✓" : "⚠"}`,
+                    details: freqReport
+                });
+                
+                // Test 3: Randomness Test
+                const randomness = this.testRandomness(encryptedData);
+                if (typeof randomness !== 'string') {
+                    const meanDiff = Math.abs(randomness.mean - randomness.idealMean);
+                    results.push({
+                        name: "Randomness Test",
+                        status: meanDiff < 5 ? "PASS" : "WARNING",
+                        message: `Mean: ${randomness.mean} (Ideal: ${randomness.idealMean}) ${meanDiff < 5 ? "✓" : "⚠"}`,
+                        details: `Variance: ${randomness.variance} (Ideal: ${randomness.idealVariance})`
+                    });
+                }
+                
+                return results;
+            }
+        }
+
         class CipherUIController {
             constructor() {
                 this.cipher = new ConsistentHomophonicCipher();
@@ -833,28 +991,15 @@
                 const chars = [];
                 const usedChars = new Set();
                 
-                // Только читаемые символы из безопасных диапазонов
                 const safeRanges = [
-                    [0x0020, 0x007F],   // Basic Latin
-                    [0x00A0, 0x00FF],   // Latin-1 Supplement
-                    [0x0100, 0x017F],   // Latin Extended-A
-                    [0x0180, 0x024F],   // Latin Extended-B
-                    [0x0370, 0x03FF],   // Greek
-                    [0x0400, 0x04FF],   // Cyrillic
-                    [0x2000, 0x206F],   // General Punctuation
-                    [0x2100, 0x214F],   // Letterlike Symbols
-                    [0x2150, 0x218F],   // Number Forms
-                    [0x2190, 0x21FF],   // Arrows
-                    [0x2200, 0x22FF],   // Math Operators
-                    [0x2300, 0x23FF],   // Misc Technical
-                    [0x2500, 0x257F],   // Box Drawing
-                    [0x2580, 0x259F],   // Block Elements
-                    [0x25A0, 0x25FF],   // Geometric Shapes
-                    [0x2600, 0x26FF],   // Misc Symbols
-                    [0x2700, 0x27BF]    // Dingbats
+                    [0x0020, 0x007F], [0x00A0, 0x00FF], [0x0100, 0x017F],
+                    [0x0180, 0x024F], [0x0370, 0x03FF], [0x0400, 0x04FF],
+                    [0x2000, 0x206F], [0x2100, 0x214F], [0x2150, 0x218F],
+                    [0x2190, 0x21FF], [0x2200, 0x22FF], [0x2300, 0x23FF],
+                    [0x2500, 0x257F], [0x2580, 0x259F], [0x25A0, 0x25FF],
+                    [0x2600, 0x26FF], [0x2700, 0x27BF]
                 ];
 
-                // Сначала добавляем гарантированно читаемые символы
                 const basicChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_-+=[]{}|;:,.<>?/~`'\"\\";
                 for (const char of basicChars) {
                     if (chars.length >= 256) break;
@@ -864,19 +1009,14 @@
                     }
                 }
 
-                // Затем дополняем случайными символами из безопасных диапазонов
                 while (chars.length < 256) {
                     const range = safeRanges[Math.floor(Math.random() * safeRanges.length)];
                     const codePoint = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
                     
-                    // Пропускаем проблемные символы
-                    if (codePoint === 0xFEFF || codePoint === 0xFFFE || codePoint === 0xFFFF) {
-                        continue;
-                    }
+                    if (codePoint === 0xFEFF || codePoint === 0xFFFE || codePoint === 0xFFFF) continue;
 
                     try {
                         const char = String.fromCodePoint(codePoint);
-                        // Проверяем что символ читаемый и не дублируется
                         if (char.length === 1 && !usedChars.has(char) && /[\S]/.test(char)) {
                             chars.push(char);
                             usedChars.add(char);
@@ -885,7 +1025,6 @@
                         continue;
                     }
                     
-                    // Защита от бесконечного цикла
                     if (chars.length > 300) break;
                 }
 
@@ -975,6 +1114,9 @@
                     this.updateSBoxDisplay();
                     this.saveSettings();
 
+                    // Run automatic tests after encryption
+                    this.runAutomaticTests(result, inputData, passphrase, outputFormat);
+
                     this.setStatus('ready', 'Encryption successful');
                 } catch (error) {
                     this.setStatus('error', 'Encryption failed: ' + error.message);
@@ -982,6 +1124,52 @@
                 } finally {
                     this.hideLoading('encrypt');
                 }
+            }
+
+            async runAutomaticTests(encryptedData, originalText, key, outputFormat) {
+                this.setTestStatus('processing', 'Running tests...');
+                
+                setTimeout(async () => {
+                    try {
+                        const testResults = CipherTestSuite.runAllTests(
+                            encryptedData, 
+                            this.cipher, 
+                            originalText, 
+                            key, 
+                            outputFormat
+                        );
+                        
+                        this.displayTestResults(testResults);
+                        this.setTestStatus('ready', 'Tests completed');
+                    } catch (error) {
+                        this.setTestStatus('error', 'Tests failed: ' + error.message);
+                    }
+                }, 100);
+            }
+
+            displayTestResults(results) {
+                const testResultsDiv = document.getElementById('testResults');
+                testResultsDiv.innerHTML = '';
+                
+                results.forEach(test => {
+                    const testDiv = document.createElement('div');
+                    testDiv.className = `test-result ${test.status === 'PASS' ? 'test-pass' : 
+                                       test.status === 'FAIL' ? 'test-fail' : 'test-warning'}`;
+                    
+                    testDiv.innerHTML = `
+                        <strong>${test.name}</strong>: ${test.status}
+                        <div>${test.message}</div>
+                        <div style="font-size: 0.8em; color: #94a3b8; margin-top: 0.5rem;">${test.details}</div>
+                    `;
+                    
+                    testResultsDiv.appendChild(testDiv);
+                });
+            }
+
+            setTestStatus(type, message) {
+                const indicator = document.getElementById('testStatus');
+                indicator.className = `status-${type}`;
+                indicator.textContent = message;
             }
 
             getOutputPreview(result, format) {
@@ -1055,8 +1243,10 @@
                 document.getElementById('outputData').textContent = '';
                 document.getElementById('securityInfo').textContent = '';
                 document.getElementById('outputPreview').textContent = '';
+                document.getElementById('testResults').textContent = '';
                 document.getElementById('sboxGrid').innerHTML = '';
                 this.setStatus('ready', 'Ready');
+                this.setTestStatus('ready', 'Ready to test');
             }
 
             async handleAnalyze() {
@@ -1142,4 +1332,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
