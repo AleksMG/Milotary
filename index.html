@@ -353,6 +353,9 @@
                     <div class="form-group">
                         <label for="customCharset">Custom Character Set (256 symbols):</label>
                         <textarea id="customCharset" rows="3" placeholder="Enter exactly 256 unique symbols">abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_-+=[]{}|;:,.<>?/~`'"\абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯαβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ</textarea>
+                        <button type="button" id="generateCharset" class="btn-secondary" style="margin-top: 0.5rem; width: 100%;">
+                            Generate Random Charset
+                        </button>
                     </div>
 
                     <div class="form-group">
@@ -420,7 +423,7 @@
         </div>
 
         <div class="footer">
-            <p>Consistent Homophonic Cipher System v2.2 | Multiple Output Formats | Custom Omophones</p>
+            <p>Consistent Homophonic Cipher System v2.3 | Multiple Output Formats | Custom Omophones</p>
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
@@ -532,6 +535,10 @@
                 if (charset.length !== 256) {
                     throw new Error('Charset must contain exactly 256 characters');
                 }
+                const uniqueChars = new Set(charset);
+                if (uniqueChars.size !== 256) {
+                    throw new Error('Charset must contain 256 unique characters');
+                }
                 this.customCharset = charset;
             }
 
@@ -595,7 +602,6 @@
                     const ciphertextBytes = new Uint8Array(ciphertext.buffer);
                     outputBuffer.set(ciphertextBytes, 16);
 
-                    // Apply output format
                     switch (this.outputFormat) {
                         case 'hex':
                             return this.arrayToHex(outputBuffer);
@@ -640,7 +646,6 @@
                 try {
                     let inputBuffer;
                     
-                    // Determine input format
                     if (typeof encryptedData === 'string') {
                         if (this.outputFormat === 'hex') {
                             inputBuffer = this.hexToArray(encryptedData);
@@ -762,8 +767,10 @@
         class CipherUIController {
             constructor() {
                 this.cipher = new ConsistentHomophonicCipher();
+                this.lastBinaryResult = null;
                 this.initializeEventListeners();
                 this.updateCharsetPreview();
+                this.loadSettings();
             }
 
             initializeEventListeners() {
@@ -773,14 +780,22 @@
                 const analyzeBtn = document.getElementById('analyzeBtn');
                 const outputFormat = document.getElementById('outputFormat');
                 const customCharset = document.getElementById('customCharset');
+                const generateBtn = document.getElementById('generateCharset');
 
                 encryptBtn.addEventListener('click', () => this.handleEncrypt());
                 decryptBtn.addEventListener('click', () => this.handleDecrypt());
                 clearBtn.addEventListener('click', () => this.handleClear());
                 analyzeBtn.addEventListener('click', () => this.handleAnalyze());
                 
-                outputFormat.addEventListener('change', () => this.handleOutputFormatChange());
-                customCharset.addEventListener('input', () => this.updateCharsetPreview());
+                outputFormat.addEventListener('change', () => {
+                    this.handleOutputFormatChange();
+                    this.saveSettings();
+                });
+                customCharset.addEventListener('input', () => {
+                    this.updateCharsetPreview();
+                    this.saveSettings();
+                });
+                generateBtn.addEventListener('click', () => this.handleGenerateCharset());
             }
 
             handleOutputFormatChange() {
@@ -814,6 +829,71 @@
                 }
             }
 
+            generateRandomCharset() {
+                const chars = [];
+                const usedCodePoints = new Set();
+                
+                const ranges = [
+                    [0x0020, 0x007F], [0x00A0, 0x00FF], [0x0100, 0x017F],
+                    [0x0180, 0x024F], [0x0370, 0x03FF], [0x0400, 0x04FF],
+                    [0x2000, 0x206F], [0x2100, 0x214F], [0x2150, 0x218F],
+                    [0x2190, 0x21FF], [0x2200, 0x22FF], [0x2300, 0x23FF],
+                    [0x2500, 0x257F], [0x2580, 0x259F], [0x25A0, 0x25FF],
+                    [0x2600, 0x26FF], [0x2700, 0x27BF]
+                ];
+
+                while (chars.length < 256) {
+                    const range = ranges[Math.floor(Math.random() * ranges.length)];
+                    const codePoint = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
+                    
+                    if (usedCodePoints.has(codePoint) || codePoint === 0xFEFF || codePoint === 0xFFFE || codePoint === 0xFFFF) {
+                        continue;
+                    }
+
+                    try {
+                        const char = String.fromCodePoint(codePoint);
+                        if (char.length === 1 && !chars.includes(char)) {
+                            chars.push(char);
+                            usedCodePoints.add(codePoint);
+                        }
+                    } catch (e) {
+                        continue;
+                    }
+                }
+
+                return chars.join('');
+            }
+
+            handleGenerateCharset() {
+                const randomCharset = this.generateRandomCharset();
+                document.getElementById('customCharset').value = randomCharset;
+                this.updateCharsetPreview();
+                this.saveSettings();
+            }
+
+            saveSettings() {
+                const settings = {
+                    iterations: document.getElementById('iterations').value,
+                    diffusionMode: document.getElementById('diffusionMode').value,
+                    outputFormat: document.getElementById('outputFormat').value,
+                    customCharset: document.getElementById('customCharset').value
+                };
+                localStorage.setItem('cipherSettings', JSON.stringify(settings));
+            }
+
+            loadSettings() {
+                const saved = localStorage.getItem('cipherSettings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    document.getElementById('iterations').value = settings.iterations;
+                    document.getElementById('diffusionMode').value = settings.diffusionMode;
+                    document.getElementById('outputFormat').value = settings.outputFormat;
+                    document.getElementById('customCharset').value = settings.customCharset;
+                    this.handleOutputFormatChange();
+                    this.updateCharsetPreview();
+                }
+            }
+
             async handleEncrypt() {
                 this.setStatus('processing', 'Encrypting...');
                 this.showLoading('encrypt');
@@ -842,21 +922,30 @@
                         if (charset.length !== 256) {
                             throw new Error('Custom charset must contain exactly 256 characters');
                         }
+                        const uniqueChars = new Set(charset);
+                        if (uniqueChars.size !== 256) {
+                            throw new Error('Charset must contain 256 unique characters, found duplicates');
+                        }
                         this.cipher.setCustomCharset(charset);
                     }
 
                     await this.cipher.initializeWithKey(passphrase, iterations);
                     const result = await this.cipher.encryptData(inputData, diffusionMode);
 
-                    document.getElementById('outputData').textContent = 
-                        typeof result === 'string' ? result : 
-                        `Binary data (${result.length} bytes): ${this.arrayToHex(result.slice(0, 32))}...`;
+                    if (typeof result === 'string') {
+                        document.getElementById('outputData').textContent = result;
+                    } else {
+                        this.lastBinaryResult = result;
+                        document.getElementById('outputData').textContent = 
+                            `Binary data (${result.length} bytes) - use directly for decryption`;
+                    }
                     
                     document.getElementById('outputPreview').textContent = 
                         this.getOutputPreview(result, outputFormat);
                     
                     this.updateSecurityInfo('encrypt', typeof result === 'string' ? result.length : result.length);
                     this.updateSBoxDisplay();
+                    this.saveSettings();
 
                     this.setStatus('ready', 'Encryption successful');
                 } catch (error) {
@@ -869,7 +958,7 @@
 
             getOutputPreview(result, format) {
                 if (format === 'binary' && result instanceof Uint8Array) {
-                    return `Binary: ${result.length} bytes\nFirst 32 bytes: ${this.arrayToHex(result.slice(0, 32))}...`;
+                    return `Binary: ${result.length} bytes`;
                 } else if (format === 'custom' && typeof result === 'string') {
                     return `Custom: ${result.length} characters\nPreview: ${result.substring(0, 100)}...`;
                 } else {
@@ -892,7 +981,6 @@
                     const passphrase = document.getElementById('keyInput').value;
                     const iterations = parseInt(document.getElementById('iterations').value);
                     const diffusionMode = document.getElementById('diffusionMode').value;
-                    const inputData = document.getElementById('inputData').value;
                     const outputFormat = document.getElementById('outputFormat').value;
 
                     this.cipher.setOutputFormat(outputFormat);
@@ -902,7 +990,18 @@
                         if (charset.length !== 256) {
                             throw new Error('Custom charset must contain exactly 256 characters');
                         }
+                        const uniqueChars = new Set(charset);
+                        if (uniqueChars.size !== 256) {
+                            throw new Error('Charset must contain 256 unique characters, found duplicates');
+                        }
                         this.cipher.setCustomCharset(charset);
+                    }
+
+                    let inputData;
+                    if (outputFormat === 'binary') {
+                        inputData = this.lastBinaryResult;
+                    } else {
+                        inputData = document.getElementById('inputData').value;
                     }
 
                     await this.cipher.initializeWithKey(passphrase, iterations);
