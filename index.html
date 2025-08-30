@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Professional Homophonic Cipher | Linux Style</title>
     <style>
+        /* Стили остаются без изменений */
         :root {
             --bg-dark: #1e1e1e;
             --bg-darker: #121212;
@@ -437,57 +438,10 @@
     </div>
     
     <footer>
-        Professional Homophonic Cipher System | Secure Encryption Implementation v2.1
+        Professional Homophonic Cipher System | Secure Encryption Implementation v2.2
     </footer>
 
     <script>
-        // Детерминированный ГПСЧ на основе HMAC-SHA256
-        class DeterministicRNG {
-            constructor(key) {
-                this.key = key;
-                this.counter = 0;
-                this.buffer = new Uint8Array(0);
-                this.bufferIndex = 0;
-            }
-            
-            async getRandomBytes(n) {
-                const result = new Uint8Array(n);
-                let bytesFilled = 0;
-                
-                while (bytesFilled < n) {
-                    if (this.bufferIndex >= this.buffer.length) {
-                        await this.generateMoreBytes();
-                    }
-                    
-                    const bytesToCopy = Math.min(n - bytesFilled, this.buffer.length - this.bufferIndex);
-                    result.set(this.buffer.subarray(this.bufferIndex, this.bufferIndex + bytesToCopy), bytesFilled);
-                    
-                    this.bufferIndex += bytesToCopy;
-                    bytesFilled += bytesToCopy;
-                }
-                
-                return result;
-            }
-            
-            async generateMoreBytes() {
-                const encoder = new TextEncoder();
-                const data = encoder.encode(this.counter.toString());
-                
-                const hmacKey = await crypto.subtle.importKey(
-                    'raw',
-                    this.key,
-                    { name: 'HMAC', hash: 'SHA-256' },
-                    false,
-                    ['sign']
-                );
-                
-                const hmac = await crypto.subtle.sign('HMAC', hmacKey, data);
-                this.buffer = new Uint8Array(hmac);
-                this.bufferIndex = 0;
-                this.counter++;
-            }
-        }
-
         // Профессиональная реализация омофонного шифра с двухбайтовыми омофонами
         class ProfessionalHomophonicCipher {
             constructor() {
@@ -497,7 +451,6 @@
                 this.homophonesPerByte = 4;
                 this.salt = null;
                 this.initializationVector = null;
-                this.deterministicRNG = null;
             }
             
             // Инициализация с криптографически безопасным ГПСЧ
@@ -537,9 +490,6 @@
                     
                     this.initializationVector = new Uint8Array(seedBuffer);
                     
-                    // Инициализируем детерминированный ГСЧ
-                    this.deterministicRNG = new DeterministicRNG(this.initializationVector);
-                    
                     // Генерация таблиц омофонов
                     await this.generateTables();
                     this.initialized = true;
@@ -551,35 +501,18 @@
                 }
             }
             
-            // Детерминированная генерация таблиц омофонов с двухбайтовыми значениями
+            // Детерминированная генерация таблиц омофонов
             async generateTables() {
                 const tables = new Map();
                 this.reverseTable = new Map();
-                const allHomophones = new Set();
                 
                 // Общее количество необходимых омофонов
                 const totalHomophonesNeeded = 256 * this.homophonesPerByte;
                 
-                // Генерируем пул уникальных двухбайтовых значений (0-65535)
-                const homophonesPool = new Set();
+                // Создаем детерминированную последовательность омофонов
+                const homophonesArray = await this.generateDeterministicHomophones(totalHomophonesNeeded);
                 
-                while (homophonesPool.size < totalHomophonesNeeded) {
-                    const randomValues = await this.deterministicRNG.getRandomBytes(2);
-                    const twoByteValue = (randomValues[0] << 8) | randomValues[1];
-                    
-                    // Убеждаемся, что значение уникально
-                    if (!homophonesPool.has(twoByteValue)) {
-                        homophonesPool.add(twoByteValue);
-                    }
-                }
-                
-                // Преобразуем Set в массив для удобства работы
-                const homophonesArray = Array.from(homophonesPool);
-                
-                // Детерминированное перемешивание массива
-                await this.deterministicShuffle(homophonesArray);
-                
-                // Распределяем омофоны по байтам
+                // Распределяем омофоны по таблицам
                 let homophoneIndex = 0;
                 
                 for (let byte = 0; byte < 256; byte++) {
@@ -591,33 +524,59 @@
                         
                         // Заполняем обратную таблицу для быстрого дешифрования
                         this.reverseTable.set(homophone, byte);
-                        allHomophones.add(homophone);
                     }
                     
                     tables.set(byte, homophones);
                 }
                 
                 this.tables = tables;
-                
-                // Проверяем корректность генерации
-                if (allHomophones.size !== totalHomophonesNeeded) {
-                    throw new Error(`Invalid homophones count: ${allHomophones.size}, expected ${totalHomophonesNeeded}`);
-                }
-                
                 return true;
             }
             
-            // Детерминированное перемешивание Фишера-Йетса
-            async deterministicShuffle(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    // Получаем детерминированное случайное число
-                    const randomBytes = await this.deterministicRNG.getRandomBytes(4);
-                    const randomValue = new DataView(randomBytes.buffer).getUint32(0, true);
-                    const j = randomValue % (i + 1);
+            // Генерация детерминированной последовательности омофонов
+            async generateDeterministicHomophones(count) {
+                const homophones = new Set();
+                const usedBytes = new Uint8Array(65536 / 8).fill(0); // Bit array для отслеживания использованных значений
+                
+                // Используем HMAC-SHA256 с ключом для детерминированной генерации
+                const hmacKey = await crypto.subtle.importKey(
+                    'raw',
+                    this.initializationVector,
+                    { name: 'HMAC', hash: 'SHA-256' },
+                    false,
+                    ['sign']
+                );
+                
+                let counter = 0;
+                
+                while (homophones.size < count) {
+                    // Создаем детерминированные данные на основе ключа и счетчика
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(counter.toString());
                     
-                    // Меняем местами
-                    [array[i], array[j]] = [array[j], array[i]];
+                    // Генерируем HMAC
+                    const hmac = await crypto.subtle.sign('HMAC', hmacKey, data);
+                    const hmacBytes = new Uint8Array(hmac);
+                    
+                    // Используем байты HMAC для создания омофонов
+                    for (let i = 0; i < hmacBytes.length - 1 && homophones.size < count; i += 2) {
+                        const homophone = (hmacBytes[i] << 8) | hmacBytes[i + 1];
+                        
+                        // Проверяем, что омофон уникален
+                        const byteIndex = Math.floor(homophone / 8);
+                        const bitIndex = homophone % 8;
+                        
+                        if (!(usedBytes[byteIndex] & (1 << bitIndex))) {
+                            homophones.add(homophone);
+                            usedBytes[byteIndex] |= (1 << bitIndex);
+                        }
+                    }
+                    
+                    counter++;
                 }
+                
+                // Преобразуем в массив и сортируем для детерминированности
+                return Array.from(homophones).sort((a, b) => a - b);
             }
             
             // Шифрование байта
@@ -629,8 +588,7 @@
                 if (!homophones) throw new Error(`No homophones for byte ${byte}`);
                 
                 // Криптографически случайный выбор омофона
-                const randomValues = crypto.getRandomValues(new Uint8Array(1));
-                const randomIndex = randomValues[0] % homophones.length;
+                const randomIndex = crypto.getRandomValues(new Uint8Array(1))[0] % homophones.length;
                 return homophones[randomIndex];
             }
             
@@ -947,6 +905,11 @@
                     logMessage('Шифр успешно инициализирован', 'success');
                     logMessage(`Таблицы омофонов верифицированы (${homophonesCount} омофонов на байт)`, 'success');
                     logMessage(`Использована соль: ${cipher.bytesToHex(cipher.salt)}`, 'info');
+                    
+                    // Сохраняем хеш таблиц для проверки детерминированности
+                    const tablesHash = await hashTables(cipher.tables);
+                    logMessage(`Хеш таблиц: ${tablesHash}`, 'info');
+                    
                 } catch (error) {
                     logMessage(`Ошибка инициализации: ${error.message}`, 'error');
                     console.error(error);
@@ -1106,6 +1069,21 @@
                 document.getElementById('log-output').innerHTML = '';
                 logMessage('Журнал очищен', 'info');
             });
+            
+            // Вспомогательная функция для хеширования таблиц
+            async function hashTables(tables) {
+                const encoder = new TextEncoder();
+                let data = '';
+                
+                for (let byte = 0; byte < 256; byte++) {
+                    const homophones = tables.get(byte);
+                    data += byte + ':' + homophones.join(',') + ';';
+                }
+                
+                const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+            }
         });
     </script>
 </body>
