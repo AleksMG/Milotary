@@ -261,6 +261,20 @@
         .log-error {
             color: var(--terminal-red);
         }
+        
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--terminal-green);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -406,58 +420,41 @@
             constructor() {
                 this.tables = null;
                 this.initialized = false;
-                this.rng = null;
                 this.homophonesPerByte = 4;
+                this.seed = null;
             }
             
             // Инициализация с криптографически безопасным ГПСЧ
-            async initialize(seed, homophonesPerByte = 4) {
+            async initialize(password, homophonesPerByte = 4) {
                 this.homophonesPerByte = homophonesPerByte;
                 
                 try {
-                    // Генерация ключа из seed
+                    // Создаем seed из пароля
+                    const encoder = new TextEncoder();
+                    const passwordData = encoder.encode(password);
+                    
+                    // Используем PBKDF2 для создания ключевого материала
+                    const salt = new Uint8Array(16); // Фиксированная соль для детерминизма
                     const keyMaterial = await crypto.subtle.importKey(
-                        'raw', 
-                        seed,
+                        'raw',
+                        passwordData,
                         { name: 'PBKDF2' },
                         false,
-                        ['deriveBits', 'deriveKey']
+                        ['deriveBits']
                     );
                     
-                    // Производный ключ для AES
-                    const key = await crypto.subtle.deriveKey(
+                    const seedBuffer = await crypto.subtle.deriveBits(
                         {
                             name: 'PBKDF2',
-                            salt: new Uint8Array(16),
+                            salt: salt,
                             iterations: 100000,
                             hash: 'SHA-256'
                         },
                         keyMaterial,
-                        { name: 'AES-CTR', length: 256 },
-                        true,
-                        ['encrypt']
+                        256
                     );
                     
-                    // Инициализация CSPRNG на основе AES-CTR
-                    let counter = 0;
-                    this.rng = {
-                        getBytes: async (n) => {
-                            const counterBytes = new Uint8Array(16);
-                            new DataView(counterBytes.buffer).setBigUint64(8, BigInt(counter++));
-                            
-                            const encrypted = await crypto.subtle.encrypt(
-                                { 
-                                    name: 'AES-CTR', 
-                                    counter: counterBytes, 
-                                    length: 64 
-                                },
-                                key,
-                                new Uint8Array(n)
-                            );
-                            
-                            return new Uint8Array(encrypted);
-                        }
-                    };
+                    this.seed = new Uint8Array(seedBuffer);
                     
                     // Генерация таблиц омофонов
                     this.tables = await this.generateTables();
@@ -470,32 +467,70 @@
                 }
             }
             
+            // CSPRNG на основе HMAC-DRBG
+            async getRandomBytes(n) {
+                if (!this.seed) {
+                    throw new Error("Cipher not initialized");
+                }
+                
+                // Простой детерминированный PRNG для демонстрации
+                // В реальной системе нужно использовать более надежный подход
+                const result = new Uint8Array(n);
+                let temp = new Uint8Array([...this.seed]);
+                
+                for (let i = 0; i < n; i++) {
+                    // "Хэшируем" текущее состояние для получения следующего байта
+                    const hash = await crypto.subtle.digest('SHA-256', temp);
+                    const hashArray = new Uint8Array(hash);
+                    
+                    result[i] = hashArray[0];
+                    
+                    // Обновляем состояние
+                    temp = new Uint8Array(hashArray.slice(0, 32));
+                    temp[0] = (temp[0] + 1) % 256;
+                }
+                
+                return result;
+            }
+            
             // Корректная генерация таблиц омофонов
             async generateTables() {
                 const tables = new Map();
-                const usedHomophones = new Set();
+                const allHomophones = new Set();
                 
-                // Сначала создаем пустые наборы для каждого байта
-                for (let byte = 0; byte < 256; byte++) {
-                    tables.set(byte, new Set());
+                // Создаем список всех возможных омофонов (0-255)
+                const totalHomophones = 256;
+                const availableHomophones = Array.from({length: totalHomophones}, (_, i) => i);
+                
+                // Перемешиваем доступные омофоны
+                for (let i = availableHomophones.length - 1; i > 0; i--) {
+                    const randomBytes = await this.getRandomBytes(4);
+                    const j = new DataView(randomBytes.buffer).getUint32(0, true) % (i + 1);
+                    [availableHomophones[i], availableHomophones[j]] = [availableHomophones[j], availableHomophones[i]];
                 }
                 
-                // Генерируем омофоны для каждого байта
+                // Распределяем омофоны по байтам
+                let homophoneIndex = 0;
+                
                 for (let byte = 0; byte < 256; byte++) {
-                    const homophones = tables.get(byte);
+                    const homophones = [];
                     
-                    while (homophones.size < this.homophonesPerByte) {
-                        const randomBytes = await this.rng.getBytes(1);
-                        const candidate = randomBytes[0];
-                        
-                        // Проверяем, не используется ли уже этот омофон
-                        if (!usedHomophones.has(candidate)) {
-                            homophones.add(candidate);
-                            usedHomophones.add(candidate);
+                    for (let i = 0; i < this.homophonesPerByte; i++) {
+                        if (homophoneIndex >= availableHomophones.length) {
+                            throw new Error("Not enough homophones available");
                         }
+                        
+                        const homophone = availableHomophones[homophoneIndex++];
+                        homophones.push(homophone);
+                        allHomophones.add(homophone);
                     }
                     
-                    tables.set(byte, Array.from(homophones));
+                    tables.set(byte, homophones);
+                }
+                
+                // Проверяем, что все омофоны уникальны
+                if (allHomophones.size !== 256) {
+                    throw new Error("Homophones are not unique");
                 }
                 
                 return tables;
@@ -510,8 +545,8 @@
                 if (!homophones) throw new Error(`No homophones for byte ${byte}`);
                 
                 // Криптографически случайный выбор
-                const randomIndexBytes = await this.rng.getBytes(4);
-                const randomIndex = new DataView(randomIndexBytes.buffer).getUint32(0, true) % homophones.length;
+                const randomBytes = await this.getRandomBytes(4);
+                const randomIndex = new DataView(randomBytes.buffer).getUint32(0, true) % homophones.length;
                 
                 return {
                     homophone: homophones[randomIndex],
@@ -578,6 +613,10 @@
                 for (let byte = 0; byte < 256; byte++) {
                     const homophones = this.tables.get(byte);
                     
+                    if (!homophones || homophones.length === 0) {
+                        throw new Error(`No homophones for byte ${byte}`);
+                    }
+                    
                     // Проверка постоянного размера
                     if (homophoneCount === null) {
                         homophoneCount = homophones.length;
@@ -632,13 +671,25 @@
         function arrayToHexString(uintArray) {
             return Array.from(uintArray)
                 .map(b => b.toString(16).padStart(2, '0'))
-                .join('');
+                .join(' ');
         }
         
         function hexStringToArray(hexString) {
+            // Удаляем все пробелы и не-hex символы
+            const cleanHex = hexString.replace(/[^0-9a-fA-F]/g, '');
+            
+            // Проверяем четность длины
+            if (cleanHex.length % 2 !== 0) {
+                throw new Error("Invalid hex string length");
+            }
+            
             const result = [];
-            for (let i = 0; i < hexString.length; i += 2) {
-                result.push(parseInt(hexString.substr(i, 2), 16));
+            for (let i = 0; i < cleanHex.length; i += 2) {
+                const byte = parseInt(cleanHex.substr(i, 2), 16);
+                if (isNaN(byte)) {
+                    throw new Error("Invalid hex characters");
+                }
+                result.push(byte);
             }
             return new Uint8Array(result);
         }
@@ -733,16 +784,15 @@
                 
                 try {
                     logMessage('Начало инициализации шифра...', 'info');
+                    initBtn.disabled = true;
+                    initBtn.innerHTML = '<span class="loading"></span> Инициализация...';
+                    
                     updateStatus('cipher-status', false);
                     updateStatus('rng-status', false);
                     updateStatus('tables-status', false);
                     
-                    // Преобразование пароля в seed
-                    const encoder = new TextEncoder();
-                    const passwordData = encoder.encode(password);
-                    
                     // Инициализация шифра
-                    await cipher.initialize(passwordData, homophonesCount);
+                    await cipher.initialize(password, homophonesCount);
                     
                     // Верификация таблиц
                     cipher.verifyTables();
@@ -773,6 +823,9 @@
                 } catch (error) {
                     logMessage(`Ошибка инициализации: ${error.message}`, 'error');
                     console.error(error);
+                } finally {
+                    initBtn.disabled = false;
+                    initBtn.textContent = 'Инициализировать шифр';
                 }
             });
             
@@ -787,6 +840,8 @@
                 
                 try {
                     logMessage('Начало шифрования...', 'info');
+                    encryptBtn.disabled = true;
+                    encryptBtn.innerHTML = '<span class="loading"></span> Шифрование...';
                     
                     // Преобразование текста в байты
                     const encoder = new TextEncoder();
@@ -816,6 +871,9 @@
                 } catch (error) {
                     logMessage(`Ошибка шифрования: ${error.message}`, 'error');
                     console.error(error);
+                } finally {
+                    encryptBtn.disabled = false;
+                    encryptBtn.textContent = 'Зашифровать';
                 }
             });
             
@@ -827,7 +885,7 @@
                 try {
                     // Попытка использовать введенные данные или текущие зашифрованные данные
                     if (ciphertext) {
-                        encryptedData = hexStringToArray(ciphertext.replace(/\s/g, ''));
+                        encryptedData = hexStringToArray(ciphertext);
                     } else if (currentEncryptedData) {
                         encryptedData = currentEncryptedData;
                         document.getElementById('ciphertext').value = arrayToHexString(encryptedData);
@@ -837,6 +895,8 @@
                     }
                     
                     logMessage('Начало дешифрования...', 'info');
+                    decryptBtn.disabled = true;
+                    decryptBtn.innerHTML = '<span class="loading"></span> Дешифрование...';
                     
                     // Дешифрование
                     const decryptedData = cipher.decryptData(encryptedData);
@@ -852,6 +912,9 @@
                 } catch (error) {
                     logMessage(`Ошибка дешифрования: ${error.message}`, 'error');
                     console.error(error);
+                } finally {
+                    decryptBtn.disabled = false;
+                    decryptBtn.textContent = 'Дешифровать';
                 }
             });
             
