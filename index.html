@@ -261,13 +261,49 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .output-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .custom-charset {
+            margin-top: 1rem;
+        }
+        
+        .charset-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 2px;
+            margin-top: 0.5rem;
+        }
+        
+        .charset-cell {
+            padding: 0.25rem;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .output-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Consistent Homophonic Cipher System</h1>
-            <p class="subtitle">Deterministic S-Box generation with consistent encryption/decryption</p>
+            <p class="subtitle">Deterministic S-Box generation with multiple output formats</p>
         </header>
 
         <div class="grid">
@@ -302,19 +338,32 @@
                         <option value="none">No Diffusion (Testing)</option>
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label for="outputFormat">Output Format:</label>
+                    <select id="outputFormat">
+                        <option value="hex">HEX (default)</option>
+                        <option value="base64">Base64</option>
+                        <option value="binary">Binary Data</option>
+                        <option value="custom">Custom Omophones</option>
+                    </select>
+                </div>
+
+                <div id="customOptions" style="display: none;">
+                    <div class="form-group">
+                        <label for="customCharset">Custom Character Set (256 symbols):</label>
+                        <textarea id="customCharset" rows="3" placeholder="Enter exactly 256 unique symbols">abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_-+=[]{}|;:,.<>?/~`'"\абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯαβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Character Preview:</label>
+                        <div class="charset-grid" id="charsetPreview"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="card">
                 <h2 class="card-title">Data Processing</h2>
-                
-                <div class="form-group">
-                    <label for="inputType">Input Type:</label>
-                    <select id="inputType">
-                        <option value="text">Plain Text</option>
-                        <option value="hex">Hexadecimal</option>
-                        <option value="base64">Base64</option>
-                    </select>
-                </div>
                 
                 <div class="form-group">
                     <label for="inputData">Input Data:</label>
@@ -356,6 +405,13 @@
                 </div>
                 <div id="securityInfo" class="result-content"></div>
             </div>
+
+            <div class="output-preview">
+                <div class="result-header">
+                    <span class="result-title">Output Preview:</span>
+                </div>
+                <div id="outputPreview" class="result-content"></div>
+            </div>
         </div>
 
         <div class="card sbox-visualization">
@@ -364,7 +420,7 @@
         </div>
 
         <div class="footer">
-            <p>Consistent Homophonic Cipher System v2.1 | Deterministic S-Box Generation | Reversible Encryption</p>
+            <p>Consistent Homophonic Cipher System v2.2 | Multiple Output Formats | Custom Omophones</p>
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
@@ -376,12 +432,13 @@
                 this.inverseSbox = null;
                 this.initializationVector = null;
                 this.hmacKey = null;
-                this.fixedSalt = new TextEncoder().encode("HomophonicCipherFixedSalt123!"); // Fixed salt for deterministic S-Box
+                this.fixedSalt = new TextEncoder().encode("HomophonicCipherFixedSalt123!");
+                this.customCharset = null;
+                this.outputFormat = 'hex';
             }
 
             async initializeWithKey(passphrase, iterations = 100000) {
                 try {
-                    // Derive master key using PBKDF2 with FIXED salt for deterministic S-Box
                     const encoder = new TextEncoder();
                     const passphraseBuffer = encoder.encode(passphrase);
                     
@@ -393,11 +450,10 @@
                         ['deriveBits', 'deriveKey']
                     );
 
-                    // Derive 512 bits for multiple purposes using FIXED salt
                     const derivedBits = await crypto.subtle.deriveBits(
                         {
                             name: 'PBKDF2',
-                            salt: this.fixedSalt, // FIXED salt for deterministic behavior
+                            salt: this.fixedSalt,
                             iterations: iterations,
                             hash: 'SHA-512'
                         },
@@ -406,12 +462,9 @@
                     );
 
                     const derivedBuffer = new Uint8Array(derivedBits);
-                    
-                    // Split into encryption key (256 bits) and HMAC key (256 bits)
                     const encryptionKey = derivedBuffer.slice(0, 32);
                     this.hmacKey = derivedBuffer.slice(32, 64);
 
-                    // Generate S-Box using deterministic algorithm
                     await this.generateSBox(encryptionKey);
                     
                     return true;
@@ -423,7 +476,6 @@
 
             async generateSBox(encryptionKey) {
                 try {
-                    // Import encryption key for HMAC
                     const hmacKey = await crypto.subtle.importKey(
                         'raw',
                         encryptionKey,
@@ -438,13 +490,11 @@
                     this.sbox = new Array(256);
                     this.inverseSbox = new Map();
 
-                    // Generate all possible homophones (65536 values)
                     const allHomophones = new Array(65536);
                     for (let i = 0; i < 65536; i++) {
                         allHomophones[i] = i;
                     }
 
-                    // Deterministic shuffle using HMAC-based PRNG with FIXED algorithm
                     for (let i = 65535; i > 0; i--) {
                         const hmac = await crypto.subtle.sign(
                             'HMAC',
@@ -459,7 +509,6 @@
                         [allHomophones[i], allHomophones[j]] = [allHomophones[j], allHomophones[i]];
                     }
 
-                    // Assign homophones to S-Box (256 input bytes × 256 homophones each)
                     for (let inputByte = 0; inputByte < 256; inputByte++) {
                         this.sbox[inputByte] = new Array(256);
                         for (let homophoneIndex = 0; homophoneIndex < 256; homophoneIndex++) {
@@ -475,46 +524,90 @@
                 }
             }
 
+            setOutputFormat(format) {
+                this.outputFormat = format;
+            }
+
+            setCustomCharset(charset) {
+                if (charset.length !== 256) {
+                    throw new Error('Charset must contain exactly 256 characters');
+                }
+                this.customCharset = charset;
+            }
+
+            arrayToHex(array) {
+                return Array.from(array)
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+            }
+
+            arrayToBase64(array) {
+                return btoa(String.fromCharCode(...array));
+            }
+
+            hexToArray(hexString) {
+                const result = new Uint8Array(hexString.length / 2);
+                for (let i = 0; i < hexString.length; i += 2) {
+                    result[i / 2] = parseInt(hexString.substr(i, 2), 16);
+                }
+                return result;
+            }
+
+            base64ToArray(base64) {
+                const binary = atob(base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes;
+            }
+
             async encryptData(plaintext, diffusionMode = 'cbc') {
                 try {
                     const encoder = new TextEncoder();
                     const plaintextBuffer = encoder.encode(plaintext);
                     let ciphertext = new Uint16Array(plaintextBuffer.length);
                     
-                    // Generate IV for this encryption session (stored with ciphertext)
                     this.initializationVector = crypto.getRandomValues(new Uint8Array(16));
                     let previousBlock = this.initializationVector;
                     
                     for (let i = 0; i < plaintextBuffer.length; i++) {
                         const plainByte = plaintextBuffer[i];
                         
-                        // Apply diffusion based on mode
                         let byteToEncrypt = plainByte;
                         if (diffusionMode !== 'none') {
                             byteToEncrypt ^= previousBlock[i % 16];
                         }
                         
-                        // Select random homophone (cryptographically secure but reproducible)
                         const randomIndex = crypto.getRandomValues(new Uint8Array(1))[0];
                         const homophone = this.sbox[byteToEncrypt][randomIndex];
                         
                         ciphertext[i] = homophone;
                         
-                        // Update previous block for diffusion
                         if (diffusionMode === 'cbc') {
                             previousBlock = this.updateDiffusionBlock(previousBlock, homophone);
                         }
                     }
                     
-                    // Prepare output: IV + ciphertext
                     const outputBuffer = new Uint8Array(16 + ciphertext.length * 2);
                     outputBuffer.set(this.initializationVector, 0);
                     
-                    // Convert Uint16Array to bytes
                     const ciphertextBytes = new Uint8Array(ciphertext.buffer);
                     outputBuffer.set(ciphertextBytes, 16);
-                    
-                    return this.arrayToHex(outputBuffer);
+
+                    // Apply output format
+                    switch (this.outputFormat) {
+                        case 'hex':
+                            return this.arrayToHex(outputBuffer);
+                        case 'base64':
+                            return this.arrayToBase64(outputBuffer);
+                        case 'binary':
+                            return outputBuffer;
+                        case 'custom':
+                            return await this.convertToCustomFormat(outputBuffer);
+                        default:
+                            return this.arrayToHex(outputBuffer);
+                    }
                     
                 } catch (error) {
                     console.error('Encryption failed:', error);
@@ -522,20 +615,55 @@
                 }
             }
 
+            async convertToCustomFormat(binaryData) {
+                if (!this.customCharset) {
+                    throw new Error('Custom charset not set');
+                }
+
+                let result = '';
+                for (let i = 0; i < binaryData.length; i += 2) {
+                    if (i + 1 >= binaryData.length) break;
+                    
+                    const byte1 = binaryData[i];
+                    const byte2 = binaryData[i + 1];
+                    const value = (byte1 << 8) | byte2;
+                    
+                    const index1 = value % 256;
+                    const index2 = Math.floor(value / 256) % 256;
+                    
+                    result += this.customCharset[index1] + this.customCharset[index2];
+                }
+                return result;
+            }
+
             async decryptData(encryptedData, diffusionMode = 'cbc') {
                 try {
-                    // Parse input: IV (16 bytes) + ciphertext
-                    const inputBuffer = this.hexToArray(encryptedData);
+                    let inputBuffer;
                     
+                    // Determine input format
+                    if (typeof encryptedData === 'string') {
+                        if (this.outputFormat === 'hex') {
+                            inputBuffer = this.hexToArray(encryptedData);
+                        } else if (this.outputFormat === 'base64') {
+                            inputBuffer = this.base64ToArray(encryptedData);
+                        } else if (this.outputFormat === 'custom') {
+                            inputBuffer = await this.convertFromCustomFormat(encryptedData);
+                        } else {
+                            throw new Error('Unknown input format');
+                        }
+                    } else if (encryptedData instanceof Uint8Array) {
+                        inputBuffer = encryptedData;
+                    } else {
+                        throw new Error('Unsupported input type');
+                    }
+
                     if (inputBuffer.length < 16) {
                         throw new Error('Invalid encrypted data format');
                     }
                     
-                    // Extract IV from beginning
                     const iv = inputBuffer.slice(0, 16);
                     const ciphertextBytes = inputBuffer.slice(16);
                     
-                    // Convert back to Uint16Array
                     const ciphertext = new Uint16Array(ciphertextBytes.buffer);
                     
                     let plaintextBuffer = new Uint8Array(ciphertext.length);
@@ -550,14 +678,12 @@
                         
                         let decryptedByte = this.inverseSbox.get(homophone);
                         
-                        // Reverse diffusion
                         if (diffusionMode !== 'none') {
                             decryptedByte ^= previousBlock[i % 16];
                         }
                         
                         plaintextBuffer[i] = decryptedByte;
                         
-                        // Update previous block (must match encryption process exactly)
                         if (diffusionMode === 'cbc') {
                             previousBlock = this.updateDiffusionBlock(previousBlock, homophone);
                         }
@@ -572,6 +698,37 @@
                 }
             }
 
+            async convertFromCustomFormat(customData) {
+                if (!this.customCharset) {
+                    throw new Error('Custom charset not set');
+                }
+
+                const charToIndex = {};
+                for (let i = 0; i < this.customCharset.length; i++) {
+                    charToIndex[this.customCharset[i]] = i;
+                }
+
+                const result = new Uint8Array(customData.length);
+                let outputIndex = 0;
+
+                for (let i = 0; i < customData.length; i += 2) {
+                    if (i + 1 >= customData.length) break;
+                    
+                    const char1 = customData[i];
+                    const char2 = customData[i + 1];
+                    
+                    const index1 = charToIndex[char1];
+                    const index2 = charToIndex[char2];
+                    
+                    const value = index1 + (index2 * 256);
+                    
+                    result[outputIndex++] = (value >> 8) & 0xFF;
+                    result[outputIndex++] = value & 0xFF;
+                }
+
+                return result.slice(0, outputIndex);
+            }
+
             updateDiffusionBlock(block, homophone) {
                 const newBlock = new Uint8Array(16);
                 const homophoneBytes = new Uint8Array([
@@ -584,20 +741,6 @@
                 }
                 
                 return newBlock;
-            }
-
-            arrayToHex(array) {
-                return Array.from(array)
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join('');
-            }
-
-            hexToArray(hexString) {
-                const result = new Uint8Array(hexString.length / 2);
-                for (let i = 0; i < hexString.length; i += 2) {
-                    result[i / 2] = parseInt(hexString.substr(i, 2), 16);
-                }
-                return result;
             }
 
             getSBoxPreview() {
@@ -616,11 +759,11 @@
             }
         }
 
-        // UI Controller
         class CipherUIController {
             constructor() {
                 this.cipher = new ConsistentHomophonicCipher();
                 this.initializeEventListeners();
+                this.updateCharsetPreview();
             }
 
             initializeEventListeners() {
@@ -628,11 +771,47 @@
                 const decryptBtn = document.getElementById('decryptBtn');
                 const clearBtn = document.getElementById('clearBtn');
                 const analyzeBtn = document.getElementById('analyzeBtn');
+                const outputFormat = document.getElementById('outputFormat');
+                const customCharset = document.getElementById('customCharset');
 
                 encryptBtn.addEventListener('click', () => this.handleEncrypt());
                 decryptBtn.addEventListener('click', () => this.handleDecrypt());
                 clearBtn.addEventListener('click', () => this.handleClear());
                 analyzeBtn.addEventListener('click', () => this.handleAnalyze());
+                
+                outputFormat.addEventListener('change', () => this.handleOutputFormatChange());
+                customCharset.addEventListener('input', () => this.updateCharsetPreview());
+            }
+
+            handleOutputFormatChange() {
+                const format = document.getElementById('outputFormat').value;
+                const customOptions = document.getElementById('customOptions');
+                customOptions.style.display = format === 'custom' ? 'block' : 'none';
+                this.cipher.setOutputFormat(format);
+            }
+
+            updateCharsetPreview() {
+                const charset = document.getElementById('customCharset').value;
+                const preview = document.getElementById('charsetPreview');
+                preview.innerHTML = '';
+
+                if (charset.length === 0) return;
+
+                for (let i = 0; i < Math.min(256, 32); i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'charset-cell';
+                    cell.textContent = charset[i] || '?';
+                    cell.title = `Index: ${i}, Char: ${charset[i] || 'missing'}`;
+                    preview.appendChild(cell);
+                }
+
+                if (charset.length !== 256) {
+                    const warning = document.createElement('div');
+                    warning.style.gridColumn = '1 / -1';
+                    warning.style.color = 'var(--warning)';
+                    warning.textContent = `Warning: ${charset.length}/256 characters`;
+                    preview.appendChild(warning);
+                }
             }
 
             async handleEncrypt() {
@@ -654,12 +833,29 @@
                     const iterations = parseInt(document.getElementById('iterations').value);
                     const diffusionMode = document.getElementById('diffusionMode').value;
                     const inputData = document.getElementById('inputData').value;
+                    const outputFormat = document.getElementById('outputFormat').value;
+
+                    this.cipher.setOutputFormat(outputFormat);
+
+                    if (outputFormat === 'custom') {
+                        const charset = document.getElementById('customCharset').value;
+                        if (charset.length !== 256) {
+                            throw new Error('Custom charset must contain exactly 256 characters');
+                        }
+                        this.cipher.setCustomCharset(charset);
+                    }
 
                     await this.cipher.initializeWithKey(passphrase, iterations);
                     const result = await this.cipher.encryptData(inputData, diffusionMode);
 
-                    document.getElementById('outputData').textContent = result;
-                    this.updateSecurityInfo('encrypt', result.length);
+                    document.getElementById('outputData').textContent = 
+                        typeof result === 'string' ? result : 
+                        `Binary data (${result.length} bytes): ${this.arrayToHex(result.slice(0, 32))}...`;
+                    
+                    document.getElementById('outputPreview').textContent = 
+                        this.getOutputPreview(result, outputFormat);
+                    
+                    this.updateSecurityInfo('encrypt', typeof result === 'string' ? result.length : result.length);
                     this.updateSBoxDisplay();
 
                     this.setStatus('ready', 'Encryption successful');
@@ -671,6 +867,23 @@
                 }
             }
 
+            getOutputPreview(result, format) {
+                if (format === 'binary' && result instanceof Uint8Array) {
+                    return `Binary: ${result.length} bytes\nFirst 32 bytes: ${this.arrayToHex(result.slice(0, 32))}...`;
+                } else if (format === 'custom' && typeof result === 'string') {
+                    return `Custom: ${result.length} characters\nPreview: ${result.substring(0, 100)}...`;
+                } else {
+                    return String(result).substring(0, 200) + 
+                           (String(result).length > 200 ? '...' : '');
+                }
+            }
+
+            arrayToHex(array) {
+                return Array.from(array)
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+            }
+
             async handleDecrypt() {
                 this.setStatus('processing', 'Decrypting...');
                 this.showLoading('decrypt');
@@ -680,11 +893,25 @@
                     const iterations = parseInt(document.getElementById('iterations').value);
                     const diffusionMode = document.getElementById('diffusionMode').value;
                     const inputData = document.getElementById('inputData').value;
+                    const outputFormat = document.getElementById('outputFormat').value;
+
+                    this.cipher.setOutputFormat(outputFormat);
+
+                    if (outputFormat === 'custom') {
+                        const charset = document.getElementById('customCharset').value;
+                        if (charset.length !== 256) {
+                            throw new Error('Custom charset must contain exactly 256 characters');
+                        }
+                        this.cipher.setCustomCharset(charset);
+                    }
 
                     await this.cipher.initializeWithKey(passphrase, iterations);
                     const result = await this.cipher.decryptData(inputData, diffusionMode);
 
                     document.getElementById('outputData').textContent = result;
+                    document.getElementById('outputPreview').textContent = 
+                        `Decrypted: ${result.substring(0, 100)}...`;
+                    
                     this.updateSecurityInfo('decrypt', result.length);
                     
                     this.setStatus('ready', 'Decryption successful');
@@ -700,6 +927,7 @@
                 document.getElementById('inputData').value = '';
                 document.getElementById('outputData').textContent = '';
                 document.getElementById('securityInfo').textContent = '';
+                document.getElementById('outputPreview').textContent = '';
                 document.getElementById('sboxGrid').innerHTML = '';
                 this.setStatus('ready', 'Ready');
             }
@@ -715,9 +943,8 @@
                         '• Fixed salt for consistent key derivation\n' +
                         '• 256-bit encryption key via PBKDF2\n' +
                         '• 65536-element homophonic S-Box\n' +
-                        '• Reversible encryption/decryption\n' +
-                        '• IV-based diffusion modes\n' +
-                        '• Consistent S-Box for same passphrase';
+                        '• Multiple output formats support\n' +
+                        '• Custom character set for steganography';
                 }, 1000);
             }
 
@@ -738,9 +965,10 @@
             }
 
             updateSecurityInfo(operation, length) {
+                const format = document.getElementById('outputFormat').value;
                 let info = `Operation: ${operation.toUpperCase()}\n`;
-                info += `Timestamp: ${new Date().toISOString()}\n`;
-                info += `Data length: ${length} characters\n`;
+                info += `Output format: ${format}\n`;
+                info += `Data length: ${length} ${format === 'binary' ? 'bytes' : 'characters'}\n`;
                 info += `S-Box: Deterministic generation\n`;
                 info += `Key: PBKDF2 with fixed salt`;
                 
@@ -754,7 +982,6 @@
                 const grid = document.getElementById('sboxGrid');
                 grid.innerHTML = '';
 
-                // Create header
                 const emptyHeader = document.createElement('div');
                 emptyHeader.className = 'sbox-cell sbox-header';
                 grid.appendChild(emptyHeader);
@@ -766,7 +993,6 @@
                     grid.appendChild(header);
                 }
 
-                // Create rows
                 for (let i = 0; i < 16; i++) {
                     const rowHeader = document.createElement('div');
                     rowHeader.className = 'sbox-cell sbox-header';
@@ -784,7 +1010,6 @@
             }
         }
 
-        // Initialize application
         document.addEventListener('DOMContentLoaded', () => {
             new CipherUIController();
         });
