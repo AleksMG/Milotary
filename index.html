@@ -458,7 +458,7 @@
                             name: 'PBKDF2',
                             salt: this.fixedSalt,
                             iterations: iterations,
-                            hash: 'SHA-512'
+                            hash: 'SHA3-512'
                         },
                         importedKey,
                         512
@@ -484,7 +484,7 @@
                         encryptionKey,
                         {
                             name: 'HMAC',
-                            hash: 'SHA-256'
+                            hash: 'SHA3-256'
                         },
                         false,
                         ['sign']
