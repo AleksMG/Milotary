@@ -437,10 +437,57 @@
     </div>
     
     <footer>
-        Professional Homophonic Cipher System | Secure Encryption Implementation v2.0
+        Professional Homophonic Cipher System | Secure Encryption Implementation v2.1
     </footer>
 
     <script>
+        // Детерминированный ГПСЧ на основе HMAC-SHA256
+        class DeterministicRNG {
+            constructor(key) {
+                this.key = key;
+                this.counter = 0;
+                this.buffer = new Uint8Array(0);
+                this.bufferIndex = 0;
+            }
+            
+            async getRandomBytes(n) {
+                const result = new Uint8Array(n);
+                let bytesFilled = 0;
+                
+                while (bytesFilled < n) {
+                    if (this.bufferIndex >= this.buffer.length) {
+                        await this.generateMoreBytes();
+                    }
+                    
+                    const bytesToCopy = Math.min(n - bytesFilled, this.buffer.length - this.bufferIndex);
+                    result.set(this.buffer.subarray(this.bufferIndex, this.bufferIndex + bytesToCopy), bytesFilled);
+                    
+                    this.bufferIndex += bytesToCopy;
+                    bytesFilled += bytesToCopy;
+                }
+                
+                return result;
+            }
+            
+            async generateMoreBytes() {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(this.counter.toString());
+                
+                const hmacKey = await crypto.subtle.importKey(
+                    'raw',
+                    this.key,
+                    { name: 'HMAC', hash: 'SHA-256' },
+                    false,
+                    ['sign']
+                );
+                
+                const hmac = await crypto.subtle.sign('HMAC', hmacKey, data);
+                this.buffer = new Uint8Array(hmac);
+                this.bufferIndex = 0;
+                this.counter++;
+            }
+        }
+
         // Профессиональная реализация омофонного шифра с двухбайтовыми омофонами
         class ProfessionalHomophonicCipher {
             constructor() {
@@ -450,6 +497,7 @@
                 this.homophonesPerByte = 4;
                 this.salt = null;
                 this.initializationVector = null;
+                this.deterministicRNG = null;
             }
             
             // Инициализация с криптографически безопасным ГПСЧ
@@ -489,6 +537,9 @@
                     
                     this.initializationVector = new Uint8Array(seedBuffer);
                     
+                    // Инициализируем детерминированный ГСЧ
+                    this.deterministicRNG = new DeterministicRNG(this.initializationVector);
+                    
                     // Генерация таблиц омофонов
                     await this.generateTables();
                     this.initialized = true;
@@ -500,12 +551,7 @@
                 }
             }
             
-            // Генерация криптографически безопасных случайных чисел
-            async getRandomValues(n) {
-                return crypto.getRandomValues(new Uint8Array(n));
-            }
-            
-            // Генерация таблиц омофонов с двухбайтовыми значениями
+            // Детерминированная генерация таблиц омофонов с двухбайтовыми значениями
             async generateTables() {
                 const tables = new Map();
                 this.reverseTable = new Map();
@@ -518,19 +564,20 @@
                 const homophonesPool = new Set();
                 
                 while (homophonesPool.size < totalHomophonesNeeded) {
-                    const randomValues = await this.getRandomValues(2);
+                    const randomValues = await this.deterministicRNG.getRandomBytes(2);
                     const twoByteValue = (randomValues[0] << 8) | randomValues[1];
-                    homophonesPool.add(twoByteValue);
+                    
+                    // Убеждаемся, что значение уникально
+                    if (!homophonesPool.has(twoByteValue)) {
+                        homophonesPool.add(twoByteValue);
+                    }
                 }
                 
                 // Преобразуем Set в массив для удобства работы
                 const homophonesArray = Array.from(homophonesPool);
                 
-                // Перемешиваем массив для дополнительной случайности
-                for (let i = homophonesArray.length - 1; i > 0; i--) {
-                    const j = Math.floor((await this.getRandomValues(1))[0] / 256 * (i + 1));
-                    [homophonesArray[i], homophonesArray[j]] = [homophonesArray[j], homophonesArray[i]];
-                }
+                // Детерминированное перемешивание массива
+                await this.deterministicShuffle(homophonesArray);
                 
                 // Распределяем омофоны по байтам
                 let homophoneIndex = 0;
@@ -560,6 +607,19 @@
                 return true;
             }
             
+            // Детерминированное перемешивание Фишера-Йетса
+            async deterministicShuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    // Получаем детерминированное случайное число
+                    const randomBytes = await this.deterministicRNG.getRandomBytes(4);
+                    const randomValue = new DataView(randomBytes.buffer).getUint32(0, true);
+                    const j = randomValue % (i + 1);
+                    
+                    // Меняем местами
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+            
             // Шифрование байта
             async encryptByte(byte) {
                 if (!this.initialized) throw new Error("Cipher not initialized");
@@ -569,7 +629,8 @@
                 if (!homophones) throw new Error(`No homophones for byte ${byte}`);
                 
                 // Криптографически случайный выбор омофона
-                const randomIndex = (await this.getRandomValues(1))[0] % homophones.length;
+                const randomValues = crypto.getRandomValues(new Uint8Array(1));
+                const randomIndex = randomValues[0] % homophones.length;
                 return homophones[randomIndex];
             }
             
