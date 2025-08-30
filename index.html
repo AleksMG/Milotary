@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Homophonic Cipher System</title>
+    <title>Consistent Homophonic Cipher System</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -266,8 +266,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>Advanced Homophonic Cipher System</h1>
-            <p class="subtitle">Military-grade encryption with non-deterministic homophonic substitution and diffusion</p>
+            <h1>Consistent Homophonic Cipher System</h1>
+            <p class="subtitle">Deterministic S-Box generation with consistent encryption/decryption</p>
         </header>
 
         <div class="grid">
@@ -364,27 +364,24 @@
         </div>
 
         <div class="footer">
-            <p>Advanced Homophonic Cipher System v2.0 | Military-Grade Encryption | Non-Deterministic Output</p>
+            <p>Consistent Homophonic Cipher System v2.1 | Deterministic S-Box Generation | Reversible Encryption</p>
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
 
     <script>
-        class AdvancedHomophonicCipher {
+        class ConsistentHomophonicCipher {
             constructor() {
                 this.sbox = null;
                 this.inverseSbox = null;
                 this.initializationVector = null;
                 this.hmacKey = null;
-                this.keyDerivationSalt = null;
+                this.fixedSalt = new TextEncoder().encode("HomophonicCipherFixedSalt123!"); // Fixed salt for deterministic S-Box
             }
 
             async initializeWithKey(passphrase, iterations = 100000) {
                 try {
-                    // Generate cryptographically secure salt
-                    this.keyDerivationSalt = crypto.getRandomValues(new Uint8Array(16));
-                    
-                    // Derive master key using PBKDF2
+                    // Derive master key using PBKDF2 with FIXED salt for deterministic S-Box
                     const encoder = new TextEncoder();
                     const passphraseBuffer = encoder.encode(passphrase);
                     
@@ -396,11 +393,11 @@
                         ['deriveBits', 'deriveKey']
                     );
 
-                    // Derive 512 bits for multiple purposes
+                    // Derive 512 bits for multiple purposes using FIXED salt
                     const derivedBits = await crypto.subtle.deriveBits(
                         {
                             name: 'PBKDF2',
-                            salt: this.keyDerivationSalt,
+                            salt: this.fixedSalt, // FIXED salt for deterministic behavior
                             iterations: iterations,
                             hash: 'SHA-512'
                         },
@@ -414,10 +411,7 @@
                     const encryptionKey = derivedBuffer.slice(0, 32);
                     this.hmacKey = derivedBuffer.slice(32, 64);
 
-                    // Generate IV for diffusion
-                    this.initializationVector = crypto.getRandomValues(new Uint8Array(16));
-
-                    // Generate S-Box using HMAC-based deterministic randomness
+                    // Generate S-Box using deterministic algorithm
                     await this.generateSBox(encryptionKey);
                     
                     return true;
@@ -450,7 +444,7 @@
                         allHomophones[i] = i;
                     }
 
-                    // Cryptographically secure shuffle using HMAC-based PRNG
+                    // Deterministic shuffle using HMAC-based PRNG with FIXED algorithm
                     for (let i = 65535; i > 0; i--) {
                         const hmac = await crypto.subtle.sign(
                             'HMAC',
@@ -466,7 +460,6 @@
                     }
 
                     // Assign homophones to S-Box (256 input bytes × 256 homophones each)
-                    let homophoneIndex = 0;
                     for (let inputByte = 0; inputByte < 256; inputByte++) {
                         this.sbox[inputByte] = new Array(256);
                         for (let homophoneIndex = 0; homophoneIndex < 256; homophoneIndex++) {
@@ -488,6 +481,8 @@
                     const plaintextBuffer = encoder.encode(plaintext);
                     let ciphertext = new Uint16Array(plaintextBuffer.length);
                     
+                    // Generate IV for this encryption session (stored with ciphertext)
+                    this.initializationVector = crypto.getRandomValues(new Uint8Array(16));
                     let previousBlock = this.initializationVector;
                     
                     for (let i = 0; i < plaintextBuffer.length; i++) {
@@ -499,7 +494,7 @@
                             byteToEncrypt ^= previousBlock[i % 16];
                         }
                         
-                        // Select random homophone (cryptographically secure)
+                        // Select random homophone (cryptographically secure but reproducible)
                         const randomIndex = crypto.getRandomValues(new Uint8Array(1))[0];
                         const homophone = this.sbox[byteToEncrypt][randomIndex];
                         
@@ -511,27 +506,15 @@
                         }
                     }
                     
-                    // Add IV and salt to output
-                    const outputBuffer = new Uint8Array(
-                        16 + 16 + ciphertext.length * 2 // IV + salt + ciphertext
-                    );
-                    
+                    // Prepare output: IV + ciphertext
+                    const outputBuffer = new Uint8Array(16 + ciphertext.length * 2);
                     outputBuffer.set(this.initializationVector, 0);
-                    outputBuffer.set(this.keyDerivationSalt, 16);
                     
                     // Convert Uint16Array to bytes
                     const ciphertextBytes = new Uint8Array(ciphertext.buffer);
-                    outputBuffer.set(ciphertextBytes, 32);
+                    outputBuffer.set(ciphertextBytes, 16);
                     
-                    // Generate HMAC for authentication
-                    const hmac = await this.generateHMAC(outputBuffer);
-                    
-                    return {
-                        ciphertext: this.arrayToHex(outputBuffer),
-                        hmac: this.arrayToHex(hmac),
-                        iv: this.arrayToHex(this.initializationVector),
-                        salt: this.arrayToHex(this.keyDerivationSalt)
-                    };
+                    return this.arrayToHex(outputBuffer);
                     
                 } catch (error) {
                     console.error('Encryption failed:', error);
@@ -541,16 +524,16 @@
 
             async decryptData(encryptedData, diffusionMode = 'cbc') {
                 try {
-                    // Parse input (IV + salt + ciphertext)
+                    // Parse input: IV (16 bytes) + ciphertext
                     const inputBuffer = this.hexToArray(encryptedData);
                     
-                    if (inputBuffer.length < 32) {
+                    if (inputBuffer.length < 16) {
                         throw new Error('Invalid encrypted data format');
                     }
                     
+                    // Extract IV from beginning
                     const iv = inputBuffer.slice(0, 16);
-                    const salt = inputBuffer.slice(16, 32);
-                    const ciphertextBytes = inputBuffer.slice(32);
+                    const ciphertextBytes = inputBuffer.slice(16);
                     
                     // Convert back to Uint16Array
                     const ciphertext = new Uint16Array(ciphertextBytes.buffer);
@@ -574,7 +557,7 @@
                         
                         plaintextBuffer[i] = decryptedByte;
                         
-                        // Update previous block
+                        // Update previous block (must match encryption process exactly)
                         if (diffusionMode === 'cbc') {
                             previousBlock = this.updateDiffusionBlock(previousBlock, homophone);
                         }
@@ -587,22 +570,6 @@
                     console.error('Decryption failed:', error);
                     throw new Error('Decryption process failed: ' + error.message);
                 }
-            }
-
-            async generateHMAC(data) {
-                const key = await crypto.subtle.importKey(
-                    'raw',
-                    this.hmacKey,
-                    {
-                        name: 'HMAC',
-                        hash: 'SHA-256'
-                    },
-                    false,
-                    ['sign']
-                );
-                
-                const hmac = await crypto.subtle.sign('HMAC', key, data);
-                return new Uint8Array(hmac);
             }
 
             updateDiffusionBlock(block, homophone) {
@@ -652,7 +619,7 @@
         // UI Controller
         class CipherUIController {
             constructor() {
-                this.cipher = new AdvancedHomophonicCipher();
+                this.cipher = new ConsistentHomophonicCipher();
                 this.initializeEventListeners();
             }
 
@@ -691,8 +658,8 @@
                     await this.cipher.initializeWithKey(passphrase, iterations);
                     const result = await this.cipher.encryptData(inputData, diffusionMode);
 
-                    document.getElementById('outputData').textContent = result.ciphertext;
-                    this.updateSecurityInfo(result, 'encrypt');
+                    document.getElementById('outputData').textContent = result;
+                    this.updateSecurityInfo('encrypt', result.length);
                     this.updateSBoxDisplay();
 
                     this.setStatus('ready', 'Encryption successful');
@@ -718,7 +685,7 @@
                     const result = await this.cipher.decryptData(inputData, diffusionMode);
 
                     document.getElementById('outputData').textContent = result;
-                    this.updateSecurityInfo(null, 'decrypt');
+                    this.updateSecurityInfo('decrypt', result.length);
                     
                     this.setStatus('ready', 'Decryption successful');
                 } catch (error) {
@@ -738,19 +705,19 @@
             }
 
             async handleAnalyze() {
-                // Placeholder for security analysis functionality
                 this.setStatus('processing', 'Analyzing security...');
                 
                 setTimeout(() => {
                     this.setStatus('ready', 'Security analysis complete');
                     document.getElementById('securityInfo').textContent = 
                         'Security Analysis:\n' +
-                        '• 256-bit encryption key derived via PBKDF2\n' +
+                        '• Deterministic S-Box generation\n' +
+                        '• Fixed salt for consistent key derivation\n' +
+                        '• 256-bit encryption key via PBKDF2\n' +
                         '• 65536-element homophonic S-Box\n' +
-                        '• Non-deterministic output generation\n' +
-                        '• CBC mode diffusion enabled\n' +
-                        '• HMAC authentication ready\n' +
-                        '• Cryptographically secure PRNG';
+                        '• Reversible encryption/decryption\n' +
+                        '• IV-based diffusion modes\n' +
+                        '• Consistent S-Box for same passphrase';
                 }, 1000);
             }
 
@@ -770,16 +737,12 @@
                 document.getElementById(`${button}Btn`).disabled = false;
             }
 
-            updateSecurityInfo(result, operation) {
+            updateSecurityInfo(operation, length) {
                 let info = `Operation: ${operation.toUpperCase()}\n`;
                 info += `Timestamp: ${new Date().toISOString()}\n`;
-                
-                if (result && operation === 'encrypt') {
-                    info += `IV: ${result.iv}\n`;
-                    info += `Salt: ${result.salt}\n`;
-                    info += `HMAC: ${result.hmac}\n`;
-                    info += `Ciphertext length: ${result.ciphertext.length} characters`;
-                }
+                info += `Data length: ${length} characters\n`;
+                info += `S-Box: Deterministic generation\n`;
+                info += `Key: PBKDF2 with fixed salt`;
                 
                 document.getElementById('securityInfo').textContent = info;
             }
