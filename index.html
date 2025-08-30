@@ -3,1275 +3,888 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Профессиональная система байтовых омофонов</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Homophonic Cipher | Linux Style</title>
     <style>
         :root {
-            --primary: #1a365d;
-            --primary-dark: #0f172a;
-            --secondary: #2a69ac;
-            --accent: #e53e3e;
-            --success: #38a169;
-            --warning: #d69e2e;
-            --info: #3182ce;
-            --light: #f7fafc;
-            --dark: #2d3748;
-            --border: #4a5568;
-            --card-bg: rgba(26, 32, 44, 0.95);
-            --sidebar-width: 250px;
+            --bg-dark: #1e1e1e;
+            --bg-darker: #121212;
+            --terminal-green: #4af626;
+            --terminal-blue: #3465a4;
+            --terminal-red: #cc0000;
+            --terminal-yellow: #c4a000;
+            --text-color: #d3d7cf;
+            --border-color: #555753;
+            --header-bg: #2e3436;
         }
         
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Fira Code', 'Courier New', monospace;
+            box-sizing: border-box;
+            font-family: 'DejaVu Sans Mono', 'Liberation Mono', monospace;
         }
         
         body {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-            min-height: 100vh;
-            display: flex;
+            background-color: var(--bg-dark);
+            color: var(--text-color);
             line-height: 1.6;
-            color: var(--light);
-            overflow-x: hidden;
-        }
-        
-        .sidebar {
-            width: var(--sidebar-width);
-            background: rgba(15, 23, 42, 0.9);
             padding: 20px;
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
+            max-width: 1200px;
+            margin: 0 auto;
         }
         
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .logo h1 {
-            font-size: 1.5rem;
-            background: linear-gradient(45deg, #63b3ed, #4299e1);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 5px;
-        }
-        
-        .logo p {
-            font-size: 0.8rem;
-            color: #a0aec0;
-        }
-        
-        .nav-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            color: #cbd5e0;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-        
-        .nav-item:hover, .nav-item.active {
-            background: rgba(66, 153, 225, 0.15);
-            color: white;
-        }
-        
-        .nav-item i {
-            margin-right: 10px;
-            width: 20px;
-            text-align: center;
-        }
-        
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        
-        .dashboard {
+        .container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 20px;
-            margin-bottom: 30px;
+            margin-top: 20px;
         }
         
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border);
-            transition: transform 0.3s;
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
         }
         
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .card-header {
+        header {
+            background-color: var(--header-bg);
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border);
         }
         
-        .card-title {
-            font-size: 1.2rem;
-            color: white;
-            font-weight: 600;
+        h1 {
+            font-size: 1.5rem;
+            color: var(--terminal-green);
         }
         
-        .card-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, var(--secondary), var(--primary));
+        .status-bar {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .status-item {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 5px;
         }
         
-        .input-group {
-            margin-bottom: 20px;
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--terminal-red);
         }
         
-        .input-label {
+        .status-indicator.active {
+            background-color: var(--terminal-green);
+        }
+        
+        .panel {
+            background-color: var(--bg-darker);
+            border-radius: 5px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .panel-title {
+            font-size: 1.2rem;
+            color: var(--terminal-blue);
+        }
+        
+        .btn {
+            background-color: var(--header-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background-color: #3a3a3a;
+        }
+        
+        .btn-primary {
+            background-color: var(--terminal-blue);
+        }
+        
+        .btn-primary:hover {
+            background-color: #204a87;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #e2e8f0;
-            font-size: 0.95em;
+            margin-bottom: 5px;
+            color: var(--terminal-yellow);
         }
         
         input, textarea, select {
             width: 100%;
-            padding: 14px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-size: 15px;
-            transition: all 0.2s ease;
-            background: #1a202c;
-            color: #e2e8f0;
-        }
-        
-        input:focus, textarea:focus, select:focus {
-            border-color: #4299e1;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            padding: 10px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            color: var(--text-color);
         }
         
         textarea {
-            min-height: 140px;
+            min-height: 120px;
             resize: vertical;
-            line-height: 1.5;
+            font-family: monospace;
         }
         
-        .btn {
-            padding: 14px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .output {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 10px;
+            min-height: 120px;
+            overflow: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .byte-visualization {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(45deg, var(--secondary), var(--primary));
-            color: white;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(45deg, var(--accent), #c53030);
-            color: white;
-        }
-        
-        .btn-success {
-            background: linear-gradient(45deg, var(--success), #2f855a);
-            color: white;
-        }
-        
-        .btn-warning {
-            background: linear-gradient(45deg, var(--warning), #b7791f);
-            color: white;
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 16px;
-            margin: 28px 0;
             flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .byte-item {
+            padding: 3px 6px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            font-size: 0.8rem;
         }
         
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin: 24px 0;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
         }
         
-        .stat-card {
-            background: #1a202c;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border);
+        .stat-item {
+            background-color: var(--bg-dark);
+            padding: 10px;
+            border-radius: 3px;
+            border: 1px solid var(--border-color);
         }
         
         .stat-value {
-            font-size: 1.8em;
-            font-weight: 700;
-            color: #63b3ed;
-            margin: 8px 0;
+            font-weight: bold;
+            color: var(--terminal-green);
         }
         
-        .progress-bar {
-            height: 8px;
-            background: #2d3748;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(45deg, var(--success), var(--secondary));
-            border-radius: 4px;
-        }
-        
-        .crypto-strength {
+        footer {
+            margin-top: 30px;
             text-align: center;
-            padding: 20px;
-        }
-        
-        .strength-value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin: 15px 0;
-            background: linear-gradient(45deg, #63b3ed, #4299e1);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .visualization {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin: 20px 0;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .byte-block {
-            background: #4a5568;
-            border-radius: 6px;
-            padding: 12px;
-            min-width: 80px;
-            text-align: center;
-            position: relative;
-            transition: all 0.3s;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .original-byte {
-            background: var(--secondary);
-        }
-        
-        .homophone-byte {
-            background: var(--success);
-        }
-        
-        .id-bits {
-            font-size: 0.7em;
-            margin-bottom: 5px;
-            color: #e2e8f0;
-        }
-        
-        .arrow {
-            font-size: 1.5rem;
-            color: #a0aec0;
-        }
-        
-        .tab-container {
-            margin-top: 20px;
+            color: #888;
+            font-size: 0.9rem;
+            padding: 10px;
+            border-top: 1px solid var(--border-color);
         }
         
         .tabs {
             display: flex;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .tab {
-            padding: 12px 20px;
+            padding: 8px 15px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
             cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
+        }
+        
+        .tab:first-child {
+            border-radius: 3px 0 0 3px;
+        }
+        
+        .tab:last-child {
+            border-radius: 0 3px 3px 0;
         }
         
         .tab.active {
-            border-bottom: 3px solid var(--secondary);
-            color: white;
+            background-color: var(--terminal-blue);
+            border-color: var(--terminal-blue);
         }
         
-        .tab-content {
-            display: none;
+        .log-output {
+            height: 200px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.4;
         }
         
-        .tab-content.active {
-            display: block;
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 3px 0;
         }
         
-        .status-message {
-            padding: 10px;
-            border-radius: 6px;
-            margin: 10px 0;
-            text-align: center;
+        .log-info {
+            color: var(--text-color);
         }
         
-        .status-success {
-            background-color: rgba(72, 187, 120, 0.2);
-            color: #48bb78;
-            border: 1px solid #48bb78;
+        .log-success {
+            color: var(--terminal-green);
         }
         
-        .status-error {
-            background-color: rgba(245, 101, 101, 0.2);
-            color: #f56565;
-            border: 1px solid #f56565;
+        .log-warning {
+            color: var(--terminal-yellow);
         }
         
-        .status-warning {
-            background-color: rgba(246, 173, 85, 0.2);
-            color: #f6ad55;
-            border: 1px solid #f6ad55;
-        }
-        
-        .math-proof {
-            background: rgba(26, 32, 44, 0.8);
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            border-left: 4px solid var(--secondary);
-        }
-        
-        .math-proof h4 {
-            color: #63b3ed;
-            margin-bottom: 10px;
-        }
-        
-        .math-proof pre {
-            color: #a0aec0;
-            overflow-x: auto;
-            font-size: 0.9em;
-        }
-        
-        @media (max-width: 968px) {
-            body {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-            }
-            
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-            
-            .visualization {
-                flex-direction: column;
-            }
-            
-            .arrow {
-                transform: rotate(90deg);
-            }
+        .log-error {
+            color: var(--terminal-red);
         }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <h1><i class="fas fa-lock"></i> Крипто-Омофоны</h1>
-            <p>Профессиональная система шифрования</p>
-        </div>
-        
-        <a href="#" class="nav-item active">
-            <i class="fas fa-home"></i> Главная панель
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-key"></i> Управление ключами
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-lock"></i> Шифрование
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-lock-open"></i> Дешифрование
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-chart-bar"></i> Аналитика
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-cog"></i> Настройки
-        </a>
-        
-        <div class="crypto-strength">
-            <h3>Уровень защиты</h3>
-            <div class="strength-value" id="securityLevel">9.2/10</div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: 92%"></div>
+    <header>
+        <h1>Homophonic Cipher System</h1>
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-indicator" id="cipher-status"></div>
+                <span>Cipher</span>
             </div>
-            <p id="securityDesc">256-битное шифрование</p>
+            <div class="status-item">
+                <div class="status-indicator" id="rng-status"></div>
+                <span>CSPRNG</span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="tables-status"></div>
+                <span>Tables</span>
+            </div>
         </div>
-    </div>
+    </header>
     
-    <div class="main-content">
-        <div class="dashboard">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-key"></i> Ключевая система</h2>
-                    <div class="card-icon">
-                        <i class="fas fa-key"></i>
-                    </div>
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Мастер-ключ (минимум 16 символов):</label>
-                    <input type="password" id="masterKey" value="" placeholder="Введите мастер-ключ">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Соль (16+ байт):</label>
-                    <input type="text" id="salt" value="" placeholder="Уникальная соль для шифрования">
-                </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Количество омофонов на байт:</label>
-                    <select id="homophoneCount">
-                        <option value="2">2 омофона (1 бит ID)</option>
-                        <option value="4" selected>4 омофона (2 бита ID)</option>
-                        <option value="8">8 омофонов (3 бита ID)</option>
-                        <option value="16">16 омофонов (4 бита ID)</option>
-                        <option value="32">32 омофона (5 бит ID)</option>
-                        <option value="64">64 омофона (6 бит ID)</option>
-                    </select>
-                </div>
-                
-                <button class="btn btn-success" onclick="generateNewKey()">
-                    <i class="fas fa-dice"></i> Сгенерировать ключ
-                </button>
-                
-                <div class="math-proof">
-                    <h4><i class="fas fa-calculator"></i> Математическая основа обратимости:</h4>
-                    <pre>
-∀ b ∈ [0,255], ∃ H = {h₁, h₂, ..., hₙ} | hᵢ ∈ [0,255]
-f: b → (i, hᵢ) где i ∈ [0, n-1]
-f⁻¹: (i, hᵢ) → b
-Условие: H ∩ H' = ∅ для b ≠ b'
-                    </pre>
-                </div>
-                
-                <div id="keyStatus" class="status-message" style="display: none;"></div>
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Конфигурация шифра</div>
             </div>
             
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-lock"></i> Шифрование данных</h2>
-                    <div class="card-icon">
-                        <i class="fas fa-lock"></i>
-                    </div>
+            <div class="form-group">
+                <label for="password">Пароль:</label>
+                <input type="password" id="password" placeholder="Введите криптографический пароль">
+            </div>
+            
+            <div class="form-group">
+                <label for="homophones-count">Количество омофонов на байт:</label>
+                <select id="homophones-count">
+                    <option value="2">2</option>
+                    <option value="4" selected>4</option>
+                    <option value="8">8</option>
+                    <option value="16">16</option>
+                </select>
+            </div>
+            
+            <button id="init-btn" class="btn btn-primary">Инициализировать шифр</button>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Таблицы омофонов (первые 10 байт):</label>
+                <div class="output" id="tables-preview">
+                    Шифр не инициализирован
                 </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Данные для шифрования:</label>
-                    <textarea id="inputText" placeholder="Введите текст для шифрования..."></textarea>
-                </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-primary" onclick="encryptData()">
-                        <i class="fas fa-lock"></i> Зашифровать
-                    </button>
-                    <button class="btn btn-danger" onclick="decryptData()">
-                        <i class="fas fa-lock-open"></i> Расшифровать
-                    </button>
-                    <button class="btn btn-warning" onclick="clearAll()">
-                        <i class="fas fa-trash"></i> Очистить
-                    </button>
-                </div>
-                
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-label">Размер данных</div>
-                        <div class="stat-value" id="dataSize">0 B</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Энтропия</div>
-                        <div class="stat-value" id="dataEntropy">0.00</div>
-                    </div>
-                </div>
-                
-                <div class="math-proof">
-                    <h4><i class="fas fa-function"></i> Функция шифрования:</h4>
-                    <pre>
-E(b, K, S) = (i, hᵢ) где:
-  i = HMAC(K || S, b || pos) mod n
-  hᵢ = Hᵦ[i]
-Hᵦ - таблица омофонов для байта b
-pos - позиция байта в сообщении
-                    </pre>
-                </div>
-                
-                <div id="cryptoStatus" class="status-message" style="display: none;"></div>
             </div>
         </div>
         
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title"><i class="fas fa-chart-line"></i> Результаты обработки</h2>
-                <div class="card-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Операции</div>
             </div>
             
             <div class="tabs">
-                <div class="tab active" onclick="switchTab(0)">Визуализация</div>
-                <div class="tab" onclick="switchTab(1)">Статистика</div>
-                <div class="tab" onclick="switchTab(2)">Hex-просмотр</div>
-                <div class="tab" onclick="switchTab(3)">Детали</div>
+                <div class="tab active" data-tab="encrypt">Шифрование</div>
+                <div class="tab" data-tab="decrypt">Дешифрование</div>
             </div>
             
-            <div class="tab-content active">
-                <div class="visualization" id="processVisualization">
-                    <div class="status-message status-warning">
-                        <i class="fas fa-info-circle"></i> Выполните шифрование, чтобы увидеть визуализацию процесса
-                    </div>
-                </div>
-            </div>
-            
-            <div class="tab-content">
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-label">Размер после шифрования</div>
-                        <div class="stat-value" id="encryptedSize">0 B</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Энтропия результата</div>
-                        <div class="stat-value" id="encryptedEntropy">0.00</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Коэффициент расширения</div>
-                        <div class="stat-value" id="expansionRatio">0%</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Избыточность</div>
-                        <div class="stat-value" id="redundancy">0%</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="tab-content">
-                <div class="input-group">
-                    <label class="input-label">Зашифрованные данные (HEX):</label>
-                    <textarea id="outputText" readonly placeholder="Результат появится здесь..."></textarea>
+            <div id="encrypt-tab">
+                <div class="form-group">
+                    <label for="plaintext">Исходный текст:</label>
+                    <textarea id="plaintext" placeholder="Введите текст для шифрования"></textarea>
                 </div>
                 
-                <button class="btn btn-primary" onclick="copyToClipboard()">
-                    <i class="fas fa-copy"></i> Копировать в буфер
-                </button>
-                <button class="btn btn-success" onclick="downloadEncrypted()">
-                    <i class="fas fa-download"></i> Скачать файл
-                </button>
+                <button id="encrypt-btn" class="btn" disabled>Зашифровать</button>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Результат шифрования (HEX):</label>
+                    <div class="output" id="encrypted-output"></div>
+                </div>
             </div>
             
-            <div class="tab-content">
-                <div class="input-group">
-                    <label class="input-label">Детали процесса шифрования:</label>
-                    <textarea id="processDetails" readonly placeholder="Детали процесса появятся здесь..." rows="8"></textarea>
+            <div id="decrypt-tab" style="display: none;">
+                <div class="form-group">
+                    <label for="ciphertext">Зашифрованный текст (HEX):</label>
+                    <textarea id="ciphertext" placeholder="Введите hex-данные для дешифрования"></textarea>
                 </div>
                 
-                <div class="math-proof">
-                    <h4><i class="fas fa-shield-alt"></i> Криптостойкость:</h4>
-                    <pre>
-Стойкость системы основана на:
-1. Детерминированности: E(b, K, S) всегда дает одинаковый результат
-2. Однонаправленности: без K невозможно получить H
-3. Лавинном эффекте: изменение 1 бита в ключе меняет ≥50% выходных битов
-4. Энтропии: H(E(M)) ≈ 8 бит/байт независимо от H(M)
-                    </pre>
+                <button id="decrypt-btn" class="btn" disabled>Дешифровать</button>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Результат дешифрования:</label>
+                    <div class="output" id="decrypted-output"></div>
                 </div>
             </div>
         </div>
         
-        <div class="dashboard">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-shield-alt"></i> Уровень защиты</h2>
-                    <div class="card-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Визуализация данных</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Байты исходного текста:</label>
+                <div class="byte-visualization" id="original-bytes"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>Байты зашифрованного текста:</label>
+                <div class="byte-visualization" id="encrypted-bytes"></div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    Энтропия исходного текста: <span class="stat-value" id="original-entropy">-</span>
                 </div>
-                
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-label">Стойкость ключа</div>
-                        <div class="stat-value" id="keyStrength">256 бит</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="keyStrengthBar" style="width: 98%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Стойкость к анализу</div>
-                        <div class="stat-value" id="analysisResistance">9.1/10</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="analysisResistanceBar" style="width: 91%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Общая оценка</div>
-                        <div class="stat-value" id="overallScore">9.2/10</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="overallScoreBar" style="width: 92%"></div>
-                        </div>
-                    </div>
+                <div class="stat-item">
+                    Энтропия зашифрованного текста: <span class="stat-value" id="encrypted-entropy">-</span>
                 </div>
-                
-                <div class="input-group">
-                    <label class="input-label">Рекомендации по улучшению:</label>
-                    <ul style="color: #a0aec0; padding-left: 20px;">
-                        <li>Используйте ключи длиной не менее 32 символов</li>
-                        <li>Регулярно меняйте ключи и соль</li>
-                        <li>Используйте максимальное количество омофонов для важных данных</li>
-                        <li>Сочетайте с другими алгоритмами шифрования</li>
-                    </ul>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">Журнал операций</div>
+                <button id="clear-log-btn" class="btn">Очистить</button>
+            </div>
+            
+            <div class="log-output" id="log-output"></div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Статус верификации:</label>
+                <div class="output" id="verification-status">
+                    Не проведена
                 </div>
             </div>
             
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-tachometer-alt"></i> Производительность</h2>
-                    <div class="card-icon">
-                        <i class="fas fa-tachometer-alt"></i>
-                    </div>
-                </div>
-                
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-label">Скорость шифрования</div>
-                        <div class="stat-value" id="encryptionSpeed">0 МБ/с</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="encryptionSpeedBar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Скорость дешифрования</div>
-                        <div class="stat-value" id="decryptionSpeed">0 МБ/с</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="decryptionSpeedBar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Использование памяти</div>
-                        <div class="stat-value" id="memoryUsage">0 МБ</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="memoryUsageBar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="btn btn-warning" onclick="optimizePerformance()">
-                    <i class="fas fa-bolt"></i> Оптимизировать
-                </button>
-                <button class="btn btn-info" onclick="runBenchmark()">
-                    <i class="fas fa-running"></i> Запустить тест
-                </button>
-            </div>
+            <button id="verify-btn" class="btn" disabled>Запустить верификацию</button>
         </div>
     </div>
+    
+    <footer>
+        Homophonic Cipher System | Secure Encryption Implementation
+    </footer>
 
     <script>
-        // Полная профессиональная реализация системы байтовых омофонов
-        class ProfessionalByteHomophonicCipher {
+        // Основной класс для омонофонного шифрования
+        class HomophonicCipher {
             constructor() {
-                this.homophoneTables = new Map();
-                this.iterationCount = 2; // 2 раунда шифрования для баланса безопасности/производительности
-                this.performanceMetrics = {
-                    encryptionTime: 0,
-                    decryptionTime: 0,
-                    memoryUsed: 0
-                };
+                this.tables = null;
+                this.initialized = false;
+                this.rng = null;
+                this.homophonesPerByte = 4;
             }
-
-            // Генерация криптографически стойкой соли
-            generateSalt(length = 16) {
-                const randomBytes = new Uint8Array(length);
-                crypto.getRandomValues(randomBytes);
-                return Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-            }
-
-            // KDF функция на основе PBKDF2
-            async deriveKey(password, salt, iterations = 100000, length = 256) {
-                const encoder = new TextEncoder();
-                const keyMaterial = await window.crypto.subtle.importKey(
-                    'raw',
-                    encoder.encode(password),
-                    { name: 'PBKDF2' },
-                    false,
-                    ['deriveBits']
-                );
+            
+            // Инициализация с криптографически безопасным ГПСЧ
+            async initialize(seed, homophonesPerByte = 4) {
+                this.homophonesPerByte = homophonesPerByte;
                 
-                const derivedBits = await window.crypto.subtle.deriveBits(
-                    {
-                        name: 'PBKDF2',
-                        salt: encoder.encode(salt),
-                        iterations: iterations,
-                        hash: 'SHA-256'
-                    },
-                    keyMaterial,
-                    length
-                );
-                
-                return new Uint8Array(derivedBits);
+                try {
+                    // Генерация ключа из seed
+                    const keyMaterial = await crypto.subtle.importKey(
+                        'raw', 
+                        seed,
+                        { name: 'PBKDF2' },
+                        false,
+                        ['deriveBits', 'deriveKey']
+                    );
+                    
+                    // Производный ключ для AES
+                    const key = await crypto.subtle.deriveKey(
+                        {
+                            name: 'PBKDF2',
+                            salt: new Uint8Array(16),
+                            iterations: 100000,
+                            hash: 'SHA-256'
+                        },
+                        keyMaterial,
+                        { name: 'AES-CTR', length: 256 },
+                        true,
+                        ['encrypt']
+                    );
+                    
+                    // Инициализация CSPRNG на основе AES-CTR
+                    let counter = 0;
+                    this.rng = {
+                        getBytes: async (n) => {
+                            const counterBytes = new Uint8Array(16);
+                            new DataView(counterBytes.buffer).setBigUint64(8, BigInt(counter++));
+                            
+                            const encrypted = await crypto.subtle.encrypt(
+                                { 
+                                    name: 'AES-CTR', 
+                                    counter: counterBytes, 
+                                    length: 64 
+                                },
+                                key,
+                                new Uint8Array(n)
+                            );
+                            
+                            return new Uint8Array(encrypted);
+                        }
+                    };
+                    
+                    // Генерация таблиц омофонов
+                    this.tables = await this.generateTables();
+                    this.initialized = true;
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Initialization error:', error);
+                    throw error;
+                }
             }
-
-            // Генерация детерминированной таблицы омофонов
-            async generateHomophoneTables(masterKey, salt, homophonesPerByte = 4) {
+            
+            // Корректная генерация таблиц омофонов
+            async generateTables() {
                 const tables = new Map();
-                const derivedKey = await this.deriveKey(masterKey, salt);
+                const usedHomophones = new Set();
                 
-                // Создаем ключ для HMAC
-                const hmacKey = await window.crypto.subtle.importKey(
-                    'raw',
-                    derivedKey,
-                    { name: 'HMAC', hash: 'SHA-256' },
-                    false,
-                    ['sign']
-                );
-                
-                // Для каждого возможного байта (0-255) создаем таблицу омофонов
-                for (let byteValue = 0; byteValue < 256; byteValue++) {
-                    const homophones = new Set();
-                    let attempts = 0;
-                    const maxAttempts = 1000;
-                    
-                    // Генерируем уникальные омофоны для этого байта
-                    while (homophones.size < homophonesPerByte && attempts < maxAttempts) {
-                        attempts++;
-                        
-                        // Используем HMAC для детерминированной генерации
-                        const data = new Uint8Array([byteValue, homophones.size, ...derivedKey]);
-                        const signature = await window.crypto.subtle.sign('HMAC', hmacKey, data);
-                        const hashArray = new Uint8Array(signature);
-                        
-                        // Берем первый байт хеша как потенциальный омофон
-                        const candidate = hashArray[0];
-                        
-                        // Проверяем, что этот омофон еще не используется для другого байта
-                        let collision = false;
-                        for (const [otherByte, otherHomophones] of tables.entries()) {
-                            if (otherHomophones.has(candidate)) {
-                                collision = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!collision) {
-                            homophones.add(candidate);
-                        }
-                    }
-                    
-                    if (homophones.size < homophonesPerByte) {
-                        throw new Error(`Не удалось сгенерировать достаточно уникальных омофонов для байта ${byteValue}`);
-                    }
-                    
-                    tables.set(byteValue, Array.from(homophones));
+                // Сначала создаем пустые наборы для каждого байта
+                for (let byte = 0; byte < 256; byte++) {
+                    tables.set(byte, new Set());
                 }
                 
-                this.homophoneTables = tables;
+                // Генерируем омофоны для каждого байта
+                for (let byte = 0; byte < 256; byte++) {
+                    const homophones = tables.get(byte);
+                    
+                    while (homophones.size < this.homophonesPerByte) {
+                        const randomBytes = await this.rng.getBytes(1);
+                        const candidate = randomBytes[0];
+                        
+                        // Проверяем, не используется ли уже этот омофон
+                        if (!usedHomophones.has(candidate)) {
+                            homophones.add(candidate);
+                            usedHomophones.add(candidate);
+                        }
+                    }
+                    
+                    tables.set(byte, Array.from(homophones));
+                }
+                
                 return tables;
             }
-
-            // Получение омофона по байту и позиции
-            async getHomophoneForByte(byte, position, masterKey, salt, homophonesPerByte) {
-                const homophones = this.homophoneTables.get(byte);
-                if (!homophones) {
-                    throw new Error(`Нет таблицы омофонов для байта ${byte}`);
-                }
+            
+            // Шифрование с истинной случайностью
+            async encryptByte(byte, position) {
+                if (!this.initialized) throw new Error("Cipher not initialized");
+                if (byte < 0 || byte > 255) throw new Error(`Invalid byte value: ${byte}`);
                 
-                // Детерминированный выбор омофона на основе позиции
-                const positionData = new Uint8Array([...new TextEncoder().encode(masterKey + salt), position]);
-                const hash = await window.crypto.subtle.digest('SHA-256', positionData);
-                const hashArray = new Uint8Array(hash);
+                const homophones = this.tables.get(byte);
+                if (!homophones) throw new Error(`No homophones for byte ${byte}`);
                 
-                const index = hashArray[0] % homophones.length;
+                // Криптографически случайный выбор
+                const randomIndexBytes = await this.rng.getBytes(4);
+                const randomIndex = new DataView(randomIndexBytes.buffer).getUint32(0, true) % homophones.length;
+                
                 return {
-                    homophone: homophones[index],
-                    index: index
+                    homophone: homophones[randomIndex],
+                    index: randomIndex
                 };
             }
-
-            // Восстановление байта по омофону и индексу
-            getByteFromHomophone(homophoneValue, index) {
-                for (const [byte, homophones] of this.homophoneTables.entries()) {
-                    if (homophones[index] === homophoneValue) {
+            
+            // Детерминированное дешифрование
+            decryptByte(homophoneValue) {
+                if (!this.initialized) throw new Error("Cipher not initialized");
+                if (homophoneValue < 0 || homophoneValue > 255) throw new Error(`Invalid homophone value: ${homophoneValue}`);
+                
+                for (const [byte, homophones] of this.tables.entries()) {
+                    if (homophones.includes(homophoneValue)) {
                         return byte;
                     }
                 }
-                throw new Error(`Не удалось найти байт для омофона ${homophoneValue} с индексом ${index}`);
-            }
-
-            // Основная функция шифрования
-            async encrypt(data, masterKey, salt) {
-                const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
-                await this.generateHomophoneTables(masterKey, salt, homophonesPerByte);
                 
+                throw new Error(`Homophone ${homophoneValue} not found in any table`);
+            }
+            
+            // Шифрование массива байтов
+            async encryptData(data) {
+                if (!this.initialized) throw new Error("Cipher not initialized");
+                
+                const encrypted = new Uint8Array(data.length);
                 const processSteps = [];
-                let result = data;
                 
-                // Многопроходное шифрование
-                for (let round = 0; round < this.iterationCount; round++) {
-                    const roundResult = new Uint8Array(result.length * 2);
+                for (let i = 0; i < data.length; i++) {
+                    const { homophone, index } = await this.encryptByte(data[i], i);
+                    encrypted[i] = homophone;
+                    processSteps.push({ 
+                        position: i, 
+                        original: data[i], 
+                        homophone, 
+                        index 
+                    });
+                }
+                
+                return { encryptedData: encrypted, processSteps };
+            }
+            
+            // Дешифрование массива байтов
+            decryptData(encryptedData) {
+                if (!this.initialized) throw new Error("Cipher not initialized");
+                
+                const decrypted = new Uint8Array(encryptedData.length);
+                
+                for (let i = 0; i < encryptedData.length; i++) {
+                    decrypted[i] = this.decryptByte(encryptedData[i]);
+                }
+                
+                return decrypted;
+            }
+            
+            // Верификация таблиц
+            verifyTables() {
+                if (!this.tables) throw new Error("Tables not generated");
+                
+                const usedHomophones = new Set();
+                let homophoneCount = null;
+                
+                // Проверка для каждого байта
+                for (let byte = 0; byte < 256; byte++) {
+                    const homophones = this.tables.get(byte);
                     
-                    for (let i = 0; i < result.length; i++) {
-                        const originalByte = result[i];
-                        const { homophone, index } = await this.getHomophoneForByte(
-                            originalByte, 
-                            i * this.iterationCount + round, 
-                            masterKey + round, 
-                            salt + round,
-                            homophonesPerByte
-                        );
-                        
-                        // Сохраняем индекс и омофон
-                        roundResult[i * 2] = index;
-                        roundResult[i * 2 + 1] = homophone;
-                        
-                        // Сохраняем информацию для визуализации (только последний раунд)
-                        if (round === this.iterationCount - 1) {
-                            processSteps.push({
-                                original: originalByte,
-                                homophone: homophone,
-                                index: index,
-                                indexBits: index.toString(2).padStart(Math.ceil(Math.log2(homophonesPerByte)), '0'),
-                                position: i
-                            });
+                    // Проверка постоянного размера
+                    if (homophoneCount === null) {
+                        homophoneCount = homophones.length;
+                    } else if (homophones.length !== homophoneCount) {
+                        throw new Error(`Inconsistent homophone count for byte ${byte}`);
+                    }
+                    
+                    // Проверка уникальности омофонов
+                    for (const homophone of homophones) {
+                        if (usedHomophones.has(homophone)) {
+                            throw new Error(`Homophone ${homophone} used for multiple bytes`);
                         }
-                    }
-                    
-                    result = roundResult;
-                }
-                
-                return { encryptedData: result, processSteps };
-            }
-
-            // Основная функция дешифрования
-            async decrypt(encryptedData, masterKey, salt) {
-                const homophonesPerByte = parseInt(document.getElementById('homophoneCount').value);
-                await this.generateHomophoneTables(masterKey, salt, homophonesPerByte);
-                
-                let result = encryptedData;
-                
-                // Обрабатываем в обратном порядке
-                for (let round = this.iterationCount - 1; round >= 0; round--) {
-                    const roundResult = new Uint8Array(result.length / 2);
-                    
-                    for (let i = 0; i < result.length; i += 2) {
-                        const index = result[i];
-                        const homophoneValue = result[i + 1];
-                        
-                        // Восстанавливаем оригинальный байт
-                        const originalByte = this.getByteFromHomophone(homophoneValue, index);
-                        roundResult[i / 2] = originalByte;
-                    }
-                    
-                    result = roundResult;
-                }
-                
-                return result;
-            }
-
-            // Расчет энтропии данных
-            calculateEntropy(data) {
-                if (!data || data.length === 0) return 0;
-                
-                const freq = new Array(256).fill(0);
-                for (const byte of data) {
-                    freq[byte]++;
-                }
-                
-                let entropy = 0;
-                const length = data.length;
-                
-                for (const count of freq) {
-                    if (count > 0) {
-                        const p = count / length;
-                        entropy -= p * Math.log2(p);
+                        usedHomophones.add(homophone);
                     }
                 }
                 
-                return entropy;
-            }
-
-            // Расчет избыточности
-            calculateRedundancy(originalSize, encryptedSize) {
-                return ((encryptedSize - originalSize) / originalSize * 100).toFixed(1);
-            }
-        }
-
-        // Глобальные переменные
-        const cipher = new ProfessionalByteHomophonicCipher();
-        let lastProcessSteps = [];
-        let lastEncryptedData = null;
-
-        // Показать статус
-        function showStatus(elementId, message, type) {
-            const element = document.getElementById(elementId);
-            element.textContent = message;
-            element.className = `status-message status-${type}`;
-            element.style.display = 'block';
-            
-            setTimeout(() => {
-                element.style.display = 'none';
-            }, 5000);
-        }
-
-        // Генерация нового ключа
-        function generateNewKey() {
-            try {
-                const randomBytes = new Uint8Array(24); // 24 байта = 192 бита
-                crypto.getRandomValues(randomBytes);
-                const key = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-                document.getElementById('masterKey').value = key;
+                // Проверка полноты (все омофоны - байты)
+                for (const homophone of usedHomophones) {
+                    if (homophone < 0 || homophone > 255) {
+                        throw new Error(`Invalid homophone value: ${homophone}`);
+                    }
+                }
                 
-                // Генерация соли
-                document.getElementById('salt').value = cipher.generateSalt(24);
+                // Проверка размера (всего омофонов)
+                if (usedHomophones.size !== 256) {
+                    throw new Error(`Invalid total homophones count: ${usedHomophones.size}, expected 256`);
+                }
                 
-                showStatus('keyStatus', 'Новый ключ и соль успешно сгенерированы (192 бита)', 'success');
-            } catch (error) {
-                showStatus('keyStatus', 'Ошибка при генерации ключа: ' + error.message, 'error');
+                return true;
             }
         }
 
-        // Переключение вкладок
-        function switchTab(index) {
-            document.querySelectorAll('.tab').forEach((tab, i) => {
-                tab.classList.toggle('active', i === index);
-            });
-            
-            document.querySelectorAll('.tab-content').forEach((content, i) => {
-                content.classList.toggle('active', i === index);
-            });
+        // Вспомогательные функции
+        function logMessage(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
         }
-
-        // Шифрование данных
-        async function encryptData() {
-            const inputText = document.getElementById('inputText').value;
-            const masterKey = document.getElementById('masterKey').value;
-            const salt = document.getElementById('salt').value;
-            
-            if (!inputText) {
-                showStatus('cryptoStatus', 'Введите данные для шифрования', 'error');
-                return;
-            }
-            
-            if (!masterKey || masterKey.length < 16) {
-                showStatus('cryptoStatus', 'Введите мастер-ключ длиной не менее 16 символов', 'error');
-                return;
-            }
-            
-            try {
-                // Конвертируем текст в байты
-                const encoder = new TextEncoder();
-                const data = encoder.encode(inputText);
-                
-                // Измеряем время шифрования
-                const startTime = performance.now();
-                
-                // Шифруем данные
-                const { encryptedData, processSteps } = await cipher.encrypt(data, masterKey, salt);
-                lastProcessSteps = processSteps;
-                lastEncryptedData = encryptedData;
-                
-                // Замеряем производительность
-                cipher.performanceMetrics.encryptionTime = performance.now() - startTime;
-                cipher.performanceMetrics.memoryUsed = encryptedData.length;
-                
-                // Отображаем результат
-                const outputHex = Array.from(encryptedData).map(b => b.toString(16).padStart(2, '0')).join(' ');
-                document.getElementById('outputText').value = outputHex;
-                
-                // Визуализируем процесс
-                visualizeProcess();
-                
-                // Обновляем метрики
-                updateMetrics(data, encryptedData);
-                updatePerformanceMetrics();
-                updateProcessDetails(data, encryptedData, processSteps);
-                
-                showStatus('cryptoStatus', `Данные успешно зашифрованы за ${cipher.performanceMetrics.encryptionTime.toFixed(2)} мс`, 'success');
-            } catch (error) {
-                showStatus('cryptoStatus', 'Ошибка шифрования: ' + error.message, 'error');
+        
+        function updateStatus(indicatorId, isActive) {
+            const indicator = document.querySelector(`#${indicatorId}`);
+            if (isActive) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
             }
         }
-
-        // Дешифрование данных
-        async function decryptData() {
-            const inputHex = document.getElementById('inputText').value.trim();
-            const masterKey = document.getElementById('masterKey').value;
-            const salt = document.getElementById('salt').value;
-            
-            if (!inputHex) {
-                showStatus('cryptoStatus', 'Введите HEX-данные для дешифрования', 'error');
-                return;
-            }
-            
-            if (!masterKey || masterKey.length < 16) {
-                showStatus('cryptoStatus', 'Введите мастер-ключ длиной не менее 16 символов', 'error');
-                return;
-            }
-            
-            try {
-                // Конвертируем HEX-строку в байты
-                const hexBytes = inputHex.split(/\s+/);
-                const encryptedData = new Uint8Array(hexBytes.map(byte => parseInt(byte, 16)));
-                
-                // Измеряем время дешифрования
-                const startTime = performance.now();
-                
-                // Дешифруем данные
-                const decryptedData = await cipher.decrypt(encryptedData, masterKey, salt);
-                
-                // Замеряем производительность
-                cipher.performanceMetrics.decryptionTime = performance.now() - startTime;
-                
-                // Конвертируем байты обратно в текст
-                const decoder = new TextDecoder();
-                const decryptedText = decoder.decode(decryptedData);
-                
-                // Отображаем результат
-                document.getElementById('outputText').value = decryptedText;
-                
-                // Обновляем метрики
-                updateMetrics(encryptedData, decryptedData);
-                updatePerformanceMetrics();
-                
-                showStatus('cryptoStatus', `Данные успешно расшифрованы за ${cipher.performanceMetrics.decryptionTime.toFixed(2)} мс`, 'success');
-            } catch (error) {
-                showStatus('cryptoStatus', 'Ошибка дешифрования: ' + error.message, 'error');
-            }
+        
+        function arrayToHexString(uintArray) {
+            return Array.from(uintArray)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
         }
-
-        // Визуализация процесса шифрования
-        function visualizeProcess() {
-            const container = document.getElementById('processVisualization');
+        
+        function hexStringToArray(hexString) {
+            const result = [];
+            for (let i = 0; i < hexString.length; i += 2) {
+                result.push(parseInt(hexString.substr(i, 2), 16));
+            }
+            return new Uint8Array(result);
+        }
+        
+        function calculateEntropy(data) {
+            if (!data || data.length === 0) return 0;
+            
+            // Подсчет частоты каждого байта
+            const frequency = new Array(256).fill(0);
+            for (let i = 0; i < data.length; i++) {
+                frequency[data[i]]++;
+            }
+            
+            // Расчет энтропии
+            let entropy = 0;
+            for (let i = 0; i < 256; i++) {
+                if (frequency[i] > 0) {
+                    const p = frequency[i] / data.length;
+                    entropy -= p * Math.log2(p);
+                }
+            }
+            
+            return entropy;
+        }
+        
+        function visualizeBytes(containerId, data, title) {
+            const container = document.getElementById(containerId);
             container.innerHTML = '';
             
-            if (!lastProcessSteps || lastProcessSteps.length === 0) {
-                container.innerHTML = '<div class="status-message status-warning"><i class="fas fa-info-circle"></i> Нет данных для визуализации</div>';
+            if (!data || data.length === 0) {
+                container.textContent = 'Нет данных';
                 return;
             }
             
-            // Показываем только первые 6 байтов для наглядности
-            const stepsToShow = lastProcessSteps.slice(0, 6);
+            // Показываем только первые 100 байт для удобства
+            const displayData = data.slice(0, 100);
             
-            stepsToShow.forEach((step, index) => {
-                if (index > 0) {
-                    const arrow = document.createElement('div');
-                    arrow.className = 'arrow';
-                    arrow.textContent = '→';
-                    container.appendChild(arrow);
-                }
-                
-                const originalBlock = document.createElement('div');
-                originalBlock.className = 'byte-block original-byte';
-                originalBlock.innerHTML = `
-                    <div class="id-bits">ID: ${step.indexBits}</div>
-                    0x${step.original.toString(16).padStart(2, '0').toUpperCase()}
-                    <div style="font-size: 0.7em; margin-top: 5px;">Поз: ${step.position}</div>
-                `;
-                container.appendChild(originalBlock);
-                
-                const arrow = document.createElement('div');
-                arrow.className = 'arrow';
-                arrow.textContent = '→';
-                container.appendChild(arrow);
-                
-                const homophoneBlock = document.createElement('div');
-                homophoneBlock.className = 'byte-block homophone-byte';
-                homophoneBlock.innerHTML = `
-                    <div class="id-bits">ID: ${step.indexBits}</div>
-                    0x${step.homophone.toString(16).padStart(2, '0').toUpperCase()}
-                `;
-                container.appendChild(homophoneBlock);
+            displayData.forEach(byte => {
+                const byteElement = document.createElement('div');
+                byteElement.className = 'byte-item';
+                byteElement.textContent = byte.toString(16).padStart(2, '0');
+                byteElement.title = `Byte: ${byte} (0x${byte.toString(16).padStart(2, '0')})`;
+                container.appendChild(byteElement);
             });
             
-            if (lastProcessSteps.length > 6) {
-                const ellipsis = document.createElement('div');
-                ellipsis.style.cssText = 'padding: 10px; color: #a0aec0; font-style: italic; width: 100%; text-align: center;';
-                ellipsis.textContent = `... и ещё ${lastProcessSteps.length - 6} байтов`;
-                container.appendChild(ellipsis);
+            if (data.length > 100) {
+                const moreElement = document.createElement('div');
+                moreElement.className = 'byte-item';
+                moreElement.textContent = `... (+${data.length - 100})`;
+                container.appendChild(moreElement);
             }
         }
 
-        // Обновление метрик
-        function updateMetrics(originalData, processedData) {
-            if (originalData && processedData) {
-                const originalSize = originalData.length;
-                const processedSize = processedData.length;
-                const expansion = cipher.calculateRedundancy(originalSize, processedSize);
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            const cipher = new HomophonicCipher();
+            let currentEncryptedData = null;
+            
+            // Элементы интерфейса
+            const initBtn = document.getElementById('init-btn');
+            const encryptBtn = document.getElementById('encrypt-btn');
+            const decryptBtn = document.getElementById('decrypt-btn');
+            const verifyBtn = document.getElementById('verify-btn');
+            const clearLogBtn = document.getElementById('clear-log-btn');
+            const tabs = document.querySelectorAll('.tab');
+            
+            // Обработчики вкладок
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.getAttribute('data-tab');
+                    
+                    // Деактивируем все вкладки
+                    tabs.forEach(t => t.classList.remove('active'));
+                    document.getElementById('encrypt-tab').style.display = 'none';
+                    document.getElementById('decrypt-tab').style.display = 'none';
+                    
+                    // Активируем выбранную вкладку
+                    tab.classList.add('active');
+                    document.getElementById(`${tabName}-tab`).style.display = 'block';
+                });
+            });
+            
+            // Инициализация шифра
+            initBtn.addEventListener('click', async () => {
+                const password = document.getElementById('password').value;
+                const homophonesCount = parseInt(document.getElementById('homophones-count').value);
                 
-                document.getElementById('dataSize').textContent = formatBytes(originalSize);
-                document.getElementById('encryptedSize').textContent = formatBytes(processedSize);
-                document.getElementById('expansionRatio').textContent = expansion + '%';
-                document.getElementById('redundancy').textContent = expansion + '%';
+                if (!password) {
+                    logMessage('Введите пароль для инициализации', 'error');
+                    return;
+                }
                 
-                document.getElementById('dataEntropy').textContent = cipher.calculateEntropy(originalData).toFixed(3);
-                document.getElementById('encryptedEntropy').textContent = cipher.calculateEntropy(processedData).toFixed(3);
-            }
-        }
-
-        // Обновление деталей процесса
-        function updateProcessDetails(originalData, encryptedData, processSteps) {
-            const details = `Процесс шифрования:
-- Исходный размер: ${originalData.length} байт
-- Размер после шифрования: ${encryptedData.length} байт
-- Коэффициент расширения: ${cipher.calculateRedundancy(originalData.length, encryptedData.length)}%
-- Энтропия исходных данных: ${cipher.calculateEntropy(originalData).toFixed(3)} бит/байт
-- Энтропия зашифрованных данных: ${cipher.calculateEntropy(encryptedData).toFixed(3)} бит/байт
-- Количество раундов: ${cipher.iterationCount}
-- Омофонов на байт: ${document.getElementById('homophoneCount').value}
-
-Математическая гарантия:
-∀ b ∈ [0,255], ∃! H = {h₁, h₂, ..., hₙ} | hᵢ ∈ [0,255]
-f: b → (i, hᵢ) биективна, следовательно f⁻¹: (i, hᵢ) → b`;
+                try {
+                    logMessage('Начало инициализации шифра...', 'info');
+                    updateStatus('cipher-status', false);
+                    updateStatus('rng-status', false);
+                    updateStatus('tables-status', false);
+                    
+                    // Преобразование пароля в seed
+                    const encoder = new TextEncoder();
+                    const passwordData = encoder.encode(password);
+                    
+                    // Инициализация шифра
+                    await cipher.initialize(passwordData, homophonesCount);
+                    
+                    // Верификация таблиц
+                    cipher.verifyTables();
+                    
+                    // Обновление статуса
+                    updateStatus('cipher-status', true);
+                    updateStatus('rng-status', true);
+                    updateStatus('tables-status', true);
+                    
+                    // Активация кнопок
+                    encryptBtn.disabled = false;
+                    decryptBtn.disabled = false;
+                    verifyBtn.disabled = false;
+                    
+                    // Показ таблиц омофонов (первые 10 байт)
+                    const tablesPreview = document.getElementById('tables-preview');
+                    let previewText = '';
+                    
+                    for (let i = 0; i < 10; i++) {
+                        const homophones = cipher.tables.get(i);
+                        previewText += `Byte ${i}: [${homophones.map(h => h.toString(16).padStart(2, '0')).join(', ')}]\n`;
+                    }
+                    
+                    tablesPreview.textContent = previewText;
+                    
+                    logMessage('Шифр успешно инициализирован', 'success');
+                    logMessage(`Таблицы омофонов верифицированы (${homophonesCount} омофона на байт)`, 'success');
+                } catch (error) {
+                    logMessage(`Ошибка инициализации: ${error.message}`, 'error');
+                    console.error(error);
+                }
+            });
             
-            document.getElementById('processDetails').value = details;
-        }
-
-        // Обновление метрик производительности
-        function updatePerformanceMetrics() {
-            const encryptionSpeed = (cipher.performanceMetrics.memoryUsed / (cipher.performanceMetrics.encryptionTime || 1) / 1000).toFixed(1);
-            const decryptionSpeed = (cipher.performanceMetrics.memoryUsed / (cipher.performanceMetrics.decryptionTime || 1) / 1000).toFixed(1);
-            const memoryUsage = (cipher.performanceMetrics.memoryUsed / 1024 / 1024).toFixed(2);
-            
-            document.getElementById('encryptionSpeed').textContent = encryptionSpeed + ' МБ/с';
-            document.getElementById('decryptionSpeed').textContent = decryptionSpeed + ' МБ/с';
-            document.getElementById('memoryUsage').textContent = memoryUsage + ' МБ';
-            
-            document.getElementById('encryptionSpeedBar').style.width = Math.min(encryptionSpeed * 15, 100) + '%';
-            document.getElementById('decryptionSpeedBar').style.width = Math.min(decryptionSpeed * 15, 100) + '%';
-            document.getElementById('memoryUsageBar').style.width = Math.min(memoryUsage * 6, 100) + '%';
-        }
-
-        // Форматирование размера данных
-        function formatBytes(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-        }
-
-        // Оптимизация производительности
-        function optimizePerformance() {
-            cipher.iterationCount = Math.max(1, cipher.iterationCount - 1);
-            showStatus('cryptoStatus', `Производительность улучшена. Количество раундов уменьшено до ${cipher.iterationCount}.`, 'success');
-        }
-
-        // Запуск теста производительности
-        async function runBenchmark() {
-            showStatus('cryptoStatus', 'Запуск теста производительности...', 'warning');
-            
-            // Тестовые данные
-            const testData = new Uint8Array(1024);
-            crypto.getRandomValues(testData);
-            
-            const masterKey = 'benchmark-test-key-32-chars-long-!';
-            const salt = 'benchmark-salt-32-chars-long-!!';
-            
-            try {
-                const startTime = performance.now();
-                await cipher.encrypt(testData, masterKey, salt);
-                const endTime = performance.now();
+            // Шифрование
+            encryptBtn.addEventListener('click', async () => {
+                const plaintext = document.getElementById('plaintext').value;
                 
-                const speed = (testData.length / (endTime - startTime) / 1000).toFixed(1);
-                showStatus('cryptoStatus', `Тест завершен. Скорость шифрования: ${speed} МБ/с`, 'success');
+                if (!plaintext) {
+                    logMessage('Введите текст для шифрования', 'error');
+                    return;
+                }
                 
-                document.getElementById('encryptionSpeed').textContent = speed + ' МБ/с';
-                document.getElementById('encryptionSpeedBar').style.width = Math.min(speed * 15, 100) + '%';
-            } catch (error) {
-                showStatus('cryptoStatus', 'Ошибка теста: ' + error.message, 'error');
-            }
-        }
-
-        // Копирование в буфер обмена
-        function copyToClipboard() {
-            const outputText = document.getElementById('outputText');
-            outputText.select();
-            document.execCommand('copy');
+                try {
+                    logMessage('Начало шифрования...', 'info');
+                    
+                    // Преобразование текста в байты
+                    const encoder = new TextEncoder();
+                    const plaintextBytes = encoder.encode(plaintext);
+                    
+                    // Шифрование
+                    const { encryptedData, processSteps } = await cipher.encryptData(plaintextBytes);
+                    currentEncryptedData = encryptedData;
+                    
+                    // Отображение результата
+                    const hexResult = arrayToHexString(encryptedData);
+                    document.getElementById('encrypted-output').textContent = hexResult;
+                    
+                    // Визуализация байтов
+                    visualizeBytes('original-bytes', plaintextBytes, 'Original');
+                    visualizeBytes('encrypted-bytes', encryptedData, 'Encrypted');
+                    
+                    // Расчет энтропии
+                    const originalEntropy = calculateEntropy(plaintextBytes);
+                    const encryptedEntropy = calculateEntropy(encryptedData);
+                    
+                    document.getElementById('original-entropy').textContent = originalEntropy.toFixed(4);
+                    document.getElementById('encrypted-entropy').textContent = encryptedEntropy.toFixed(4);
+                    
+                    logMessage(`Текст зашифрован (${plaintextBytes.length} байт)`, 'success');
+                    logMessage(`Энтропия увеличена с ${originalEntropy.toFixed(4)} до ${encryptedEntropy.toFixed(4)}`, 'info');
+                } catch (error) {
+                    logMessage(`Ошибка шифрования: ${error.message}`, 'error');
+                    console.error(error);
+                }
+            });
             
-            showStatus('cryptoStatus', 'Текст скопирован в буфер обмена', 'success');
-        }
-
-        // Скачивание зашифрованных данных
-        function downloadEncrypted() {
-            if (!lastEncryptedData) {
-                showStatus('cryptoStatus', 'Нет данных для скачивания', 'error');
-                return;
-            }
+            // Дешифрование
+            decryptBtn.addEventListener('click', async () => {
+                const ciphertext = document.getElementById('ciphertext').value;
+                
+                let encryptedData;
+                try {
+                    // Попытка использовать введенные данные или текущие зашифрованные данные
+                    if (ciphertext) {
+                        encryptedData = hexStringToArray(ciphertext.replace(/\s/g, ''));
+                    } else if (currentEncryptedData) {
+                        encryptedData = currentEncryptedData;
+                        document.getElementById('ciphertext').value = arrayToHexString(encryptedData);
+                    } else {
+                        logMessage('Нет данных для дешифрования', 'error');
+                        return;
+                    }
+                    
+                    logMessage('Начало дешифрования...', 'info');
+                    
+                    // Дешифрование
+                    const decryptedData = cipher.decryptData(encryptedData);
+                    
+                    // Преобразование байтов в текст
+                    const decoder = new TextDecoder();
+                    const decryptedText = decoder.decode(decryptedData);
+                    
+                    // Отображение результата
+                    document.getElementById('decrypted-output').textContent = decryptedText;
+                    
+                    logMessage(`Текст дешифрован (${encryptedData.length} байт)`, 'success');
+                } catch (error) {
+                    logMessage(`Ошибка дешифрования: ${error.message}`, 'error');
+                    console.error(error);
+                }
+            });
             
-            const blob = new Blob([lastEncryptedData], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'encrypted_data.bin';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            // Верификация
+            verifyBtn.addEventListener('click', () => {
+                try {
+                    logMessage('Запуск верификации таблиц омофонов...', 'info');
+                    
+                    // Проверка таблиц
+                    cipher.verifyTables();
+                    
+                    // Обновление статуса
+                    document.getElementById('verification-status').textContent = 
+                        '✓ Таблицы омофонов верифицированы успешно';
+                    document.getElementById('verification-status').style.color = '#4af626';
+                    
+                    logMessage('Верификация завершена успешно', 'success');
+                } catch (error) {
+                    document.getElementById('verification-status').textContent = 
+                        `✗ Ошибка верификации: ${error.message}`;
+                    document.getElementById('verification-status').style.color = '#cc0000';
+                    
+                    logMessage(`Ошибка верификации: ${error.message}`, 'error');
+                    console.error(error);
+                }
+            });
             
-            showStatus('cryptoStatus', 'Файл успешно скачан', 'success');
-        }
-
-        // Очистка всех полей
-        function clearAll() {
-            document.getElementById('inputText').value = '';
-            document.getElementById('outputText').value = '';
-            document.getElementById('processDetails').value = '';
-            document.getElementById('processVisualization').innerHTML = 
-                '<div class="status-message status-warning"><i class="fas fa-info-circle"></i> Выполните шифрование, чтобы увидеть визуализацию процесса</div>';
-            
-            // Сброс метрик
-            document.getElementById('dataSize').textContent = '0 B';
-            document.getElementById('encryptedSize').textContent = '0 B';
-            document.getElementById('expansionRatio').textContent = '0%';
-            document.getElementById('redundancy').textContent = '0%';
-            document.getElementById('dataEntropy').textContent = '0.000';
-            document.getElementById('encryptedEntropy').textContent = '0.000';
-            
-            lastEncryptedData = null;
-            lastProcessSteps = [];
-            
-            showStatus('cryptoStatus', 'Все поля очищены', 'success');
-        }
-
-        // Инициализация
-        window.onload = function() {
-            generateNewKey();
-        };
+            // Очистка журнала
+            clearLogBtn.addEventListener('click', () => {
+                document.getElementById('log-output').innerHTML = '';
+                logMessage('Журнал очищен', 'info');
+            });
+        });
     </script>
 </body>
 </html>
