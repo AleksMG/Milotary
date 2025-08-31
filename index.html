@@ -343,19 +343,13 @@
         .option-control {
             flex: 2;
         }
-        
-        .warning {
-            color: var(--warning);
-            font-weight: 600;
-            margin-top: 0.5rem;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Professional Homophonic Cipher System</h1>
-            <p class="subtitle">Military-grade encryption with proper MixColumns and GCM mode</p>
+            <p class="subtitle">Military-grade encryption with AES-style MixColumns transformation</p>
         </header>
 
         <div class="grid">
@@ -387,7 +381,6 @@
                         <option value="cbc">CBC Mode</option>
                         <option value="cfb">CFB Mode</option>
                         <option value="ofb">OFB Mode</option>
-                        <option value="gcm">GCM Mode (Authenticated)</option>
                         <option value="none">No Diffusion (Testing)</option>
                     </select>
                 </div>
@@ -409,24 +402,6 @@
                         <div class="option-label">Enable MixColumns:</div>
                         <div class="option-control">
                             <input type="checkbox" id="enableMixColumns" checked>
-                        </div>
-                    </div>
-                    
-                    <div class="option-row">
-                        <div class="option-label">Additional Authentication Data (GCM):</div>
-                        <div class="option-control">
-                            <input type="text" id="aadData" placeholder="Optional authenticated data">
-                        </div>
-                    </div>
-                    
-                    <div class="option-row">
-                        <div class="option-label">Tag Length (GCM):</div>
-                        <div class="option-control">
-                            <select id="tagLength">
-                                <option value="64">64 bits</option>
-                                <option value="96">96 bits</option>
-                                <option value="128" selected>128 bits</option>
-                            </select>
                         </div>
                     </div>
                 </div>
@@ -470,10 +445,6 @@
                     <button id="clearBtn" class="btn-danger">Clear All</button>
                     <button id="analyzeBtn" class="btn-warning">Security Analysis</button>
                 </div>
-                
-                <div class="warning">
-                    Note: For GCM mode, browser's native Web Crypto API is used for proper authenticated encryption.
-                </div>
             </div>
         </div>
 
@@ -503,7 +474,6 @@
             </div>
         </div>
 
-        <!-- ==================== TESTING SECTION ==================== -->
         <div class="card">
             <h2 class="card-title">🔬 Automatic Cryptographic Tests</h2>
             
@@ -522,22 +492,22 @@
         </div>
 
         <div class="footer">
-            <p>Professional Homophonic Cipher System v3.0 | Proper MixColumns & GCM Support</p>
+            <p>Professional Homophonic Cipher System v3.0 | AES-style MixColumns Implementation</p>
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
 
     <script>
-        // Proper Galois Field multiplication for MixColumns (AES standard)
+        // Galois Field implementation for MixColumns transformation
         class GaloisField {
-            // Multiply two numbers in GF(2^8)
+            // Multiply two numbers in GF(2^8) modulo x^8 + x^4 + x^3 + x + 1
             static multiply(a, b) {
                 let p = 0;
                 for (let i = 0; i < 8; i++) {
                     if (b & 1) p ^= a;
                     const hiBitSet = a & 0x80;
                     a = (a << 1) & 0xFF;
-                    if (hiBitSet) a ^= 0x1B; // x^8 + x^4 + x^3 + x + 1
+                    if (hiBitSet) a ^= 0x1B; // Reduce modulo x^8 + x^4 + x^3 + x + 1
                     b >>= 1;
                 }
                 return p;
@@ -554,7 +524,6 @@
                 this.customCharset = null;
                 this.outputFormat = 'hex';
                 this.enableMixColumns = true;
-                this.gcmTag = null;
             }
 
             async initializeWithKey(passphrase, iterations = 100000) {
@@ -663,7 +632,7 @@
                 this.enableMixColumns = enabled;
             }
 
-            // Proper MixColumns transformation (AES standard)
+            // AES-style MixColumns transformation
             mixColumns(data) {
                 if (!this.enableMixColumns) return data;
                 
@@ -692,7 +661,7 @@
                 return result;
             }
 
-            // Proper Inverse MixColumns transformation (AES standard)
+            // AES-style Inverse MixColumns transformation
             invMixColumns(data) {
                 if (!this.enableMixColumns) return data;
                 
@@ -752,129 +721,8 @@
                 return bytes;
             }
 
-            // Use browser's native Web Crypto API for proper GCM encryption
-            async encryptGCM(plaintext, aad = '', tagLength = 128) {
-                try {
-                    const encoder = new TextEncoder();
-                    const plaintextBuffer = encoder.encode(plaintext);
-                    const aadBuffer = encoder.encode(aad);
-                    
-                    // Generate a random IV (12 bytes for GCM is standard)
-                    this.initializationVector = crypto.getRandomValues(new Uint8Array(12));
-                    
-                    // Import the HMAC key as an AES key for GCM
-                    const aesKey = await crypto.subtle.importKey(
-                        'raw',
-                        this.hmacKey.slice(0, 32), // Use first 32 bytes for AES
-                        { name: 'AES-GCM' },
-                        false,
-                        ['encrypt']
-                    );
-                    
-                    // Encrypt using Web Crypto's GCM implementation
-                    const encrypted = await crypto.subtle.encrypt(
-                        {
-                            name: 'AES-GCM',
-                            iv: this.initializationVector,
-                            additionalData: aadBuffer,
-                            tagLength: tagLength
-                        },
-                        aesKey,
-                        plaintextBuffer
-                    );
-                    
-                    const encryptedArray = new Uint8Array(encrypted);
-                    
-                    // The last (tagLength/8) bytes are the authentication tag
-                    const tagSize = tagLength / 8;
-                    this.gcmTag = encryptedArray.slice(encryptedArray.length - tagSize);
-                    const ciphertext = encryptedArray.slice(0, encryptedArray.length - tagSize);
-                    
-                    // Combine IV, ciphertext, and tag
-                    const outputBuffer = new Uint8Array(
-                        this.initializationVector.length + 
-                        ciphertext.length + 
-                        this.gcmTag.length
-                    );
-                    
-                    outputBuffer.set(this.initializationVector, 0);
-                    outputBuffer.set(ciphertext, this.initializationVector.length);
-                    outputBuffer.set(this.gcmTag, this.initializationVector.length + ciphertext.length);
-                    
-                    return outputBuffer;
-                } catch (error) {
-                    console.error('GCM encryption failed:', error);
-                    throw new Error('GCM encryption failed: ' + error.message);
-                }
-            }
-
-            // Use browser's native Web Crypto API for proper GCM decryption
-            async decryptGCM(encryptedData, aad = '', tagLength = 128) {
-                try {
-                    const aadBuffer = new TextEncoder().encode(aad);
-                    const tagSize = tagLength / 8;
-                    
-                    // Extract IV, ciphertext, and tag
-                    const iv = encryptedData.slice(0, 12);
-                    const ciphertext = encryptedData.slice(12, encryptedData.length - tagSize);
-                    const authTag = encryptedData.slice(encryptedData.length - tagSize);
-                    
-                    // Combine ciphertext and tag for Web Crypto API
-                    const ciphertextWithTag = new Uint8Array(ciphertext.length + tagSize);
-                    ciphertextWithTag.set(ciphertext, 0);
-                    ciphertextWithTag.set(authTag, ciphertext.length);
-                    
-                    // Import the HMAC key as an AES key for GCM
-                    const aesKey = await crypto.subtle.importKey(
-                        'raw',
-                        this.hmacKey.slice(0, 32), // Use first 32 bytes for AES
-                        { name: 'AES-GCM' },
-                        false,
-                        ['decrypt']
-                    );
-                    
-                    // Decrypt using Web Crypto's GCM implementation
-                    const decrypted = await crypto.subtle.decrypt(
-                        {
-                            name: 'AES-GCM',
-                            iv: iv,
-                            additionalData: aadBuffer,
-                            tagLength: tagLength
-                        },
-                        aesKey,
-                        ciphertextWithTag
-                    );
-                    
-                    return new Uint8Array(decrypted);
-                } catch (error) {
-                    console.error('GCM decryption failed:', error);
-                    throw new Error('GCM decryption failed: ' + error.message);
-                }
-            }
-
             async encryptData(plaintext, diffusionMode = 'cbc') {
                 try {
-                    // Use proper GCM implementation if selected
-                    if (diffusionMode === 'gcm') {
-                        const aad = document.getElementById('aadData').value;
-                        const tagLength = parseInt(document.getElementById('tagLength').value);
-                        const encrypted = await this.encryptGCM(plaintext, aad, tagLength);
-                        
-                        switch (this.outputFormat) {
-                            case 'hex':
-                                return this.arrayToHex(encrypted);
-                            case 'base64':
-                                return this.arrayToBase64(encrypted);
-                            case 'binary':
-                                return encrypted;
-                            case 'custom':
-                                return await this.convertToCustomFormat(encrypted);
-                            default:
-                                return this.arrayToHex(encrypted);
-                        }
-                    }
-                    
-                    // Standard encryption for other modes
                     const encoder = new TextEncoder();
                     const plaintextBuffer = encoder.encode(plaintext);
                     let ciphertext = new Uint16Array(plaintextBuffer.length);
@@ -882,14 +730,9 @@
                     this.initializationVector = crypto.getRandomValues(new Uint8Array(16));
                     let previousBlock = this.initializationVector;
                     
-                    // Apply MixColumns to the plaintext if enabled
-                    let processedBuffer = plaintextBuffer;
-                    if (this.enableMixColumns) {
-                        processedBuffer = this.mixColumns(plaintextBuffer);
-                    }
-                    
-                    for (let i = 0; i < processedBuffer.length; i++) {
-                        const plainByte = processedBuffer[i];
+                    // Apply homophonic substitution first
+                    for (let i = 0; i < plaintextBuffer.length; i++) {
+                        const plainByte = plaintextBuffer[i];
                         
                         let byteToEncrypt = plainByte;
                         if (diffusionMode !== 'none') {
@@ -906,11 +749,22 @@
                         }
                     }
                     
-                    const outputBuffer = new Uint8Array(16 + ciphertext.length * 2);
-                    outputBuffer.set(this.initializationVector, 0);
-                    
-                    const ciphertextBytes = new Uint8Array(ciphertext.buffer);
-                    outputBuffer.set(ciphertextBytes, 16);
+                    // Apply MixColumns transformation after substitution (AES style)
+                    let outputBuffer;
+                    if (this.enableMixColumns) {
+                        const ciphertextBytes = new Uint8Array(ciphertext.buffer);
+                        const mixedCiphertext = this.mixColumns(ciphertextBytes);
+                        
+                        outputBuffer = new Uint8Array(16 + mixedCiphertext.length);
+                        outputBuffer.set(this.initializationVector, 0);
+                        outputBuffer.set(mixedCiphertext, 16);
+                    } else {
+                        outputBuffer = new Uint8Array(16 + ciphertext.length * 2);
+                        outputBuffer.set(this.initializationVector, 0);
+                        
+                        const ciphertextBytes = new Uint8Array(ciphertext.buffer);
+                        outputBuffer.set(ciphertextBytes, 16);
+                    }
 
                     switch (this.outputFormat) {
                         case 'hex':
@@ -933,34 +787,6 @@
 
             async decryptData(encryptedData, diffusionMode = 'cbc') {
                 try {
-                    // Use proper GCM implementation if selected
-                    if (diffusionMode === 'gcm') {
-                        const aad = document.getElementById('aadData').value;
-                        const tagLength = parseInt(document.getElementById('tagLength').value);
-                        
-                        let inputBuffer;
-                        if (typeof encryptedData === 'string') {
-                            if (this.outputFormat === 'hex') {
-                                inputBuffer = this.hexToArray(encryptedData);
-                            } else if (this.outputFormat === 'base64') {
-                                inputBuffer = this.base64ToArray(encryptedData);
-                            } else if (this.outputFormat === 'custom') {
-                                inputBuffer = await this.convertFromCustomFormat(encryptedData);
-                            } else {
-                                throw new Error('Unknown input format');
-                            }
-                        } else if (encryptedData instanceof Uint8Array) {
-                            inputBuffer = encryptedData;
-                        } else {
-                            throw new Error('Unsupported input type');
-                        }
-                        
-                        const decrypted = await this.decryptGCM(inputBuffer, aad, tagLength);
-                        const decoder = new TextDecoder();
-                        return decoder.decode(decrypted);
-                    }
-                    
-                    // Standard decryption for other modes
                     let inputBuffer;
                     
                     if (typeof encryptedData === 'string') {
@@ -984,7 +810,12 @@
                     }
                     
                     const iv = inputBuffer.slice(0, 16);
-                    const ciphertextBytes = inputBuffer.slice(16);
+                    let ciphertextBytes = inputBuffer.slice(16);
+                    
+                    // Apply Inverse MixColumns first if enabled
+                    if (this.enableMixColumns) {
+                        ciphertextBytes = this.invMixColumns(ciphertextBytes);
+                    }
                     
                     const ciphertext = new Uint16Array(ciphertextBytes.buffer);
                     
@@ -1009,11 +840,6 @@
                         if (diffusionMode === 'cbc') {
                             previousBlock = this.updateDiffusionBlock(previousBlock, homophone);
                         }
-                    }
-                    
-                    // Apply inverse MixColumns if enabled
-                    if (this.enableMixColumns) {
-                        plaintextBuffer = this.invMixColumns(plaintextBuffer);
                     }
                     
                     const decoder = new TextDecoder();
@@ -1107,7 +933,7 @@
             }
         }
 
-        // ==================== FIXED CRYPTOGRAPHIC TEST SUITE FOR HEX ====================
+        // Cryptographic Test Suite
         class CipherTestSuite {
             static hexToBytes(hexString) {
                 const bytes = new Uint8Array(hexString.length / 2);
@@ -1144,10 +970,9 @@
                     freq[byte]++;
                 }
                 
-                let report = `Real byte analysis (0-255):\n`;
+                let report = `Byte value analysis (0-255):\n`;
                 report += `Total bytes: ${bytes.length}\n\n`;
                 
-                // Analyze byte ranges
                 const ranges = [
                     { name: '0-31 (Control chars)', count: 0, ideal: 12.5 },
                     { name: '32-126 (Printable ASCII)', count: 0, ideal: 37.1 },
@@ -1185,7 +1010,6 @@
                 }
                 variance /= bytes.length;
                 
-                // Monte Carlo Pi estimation
                 let inCircle = 0;
                 for (let i = 0; i < bytes.length - 1; i += 2) {
                     const x = bytes[i] / 255;
@@ -1228,16 +1052,14 @@
                 const results = [];
                 const bytes = this.hexToBytes(hexString);
                 
-                // Test 1: Entropy Test
                 const entropy = this.calculateEntropy(hexString);
                 results.push({
                     name: "Byte Entropy Test",
                     status: entropy > 7.9 ? "PASS" : "WARNING",
                     message: `Entropy: ${entropy.toFixed(6)}/8.000000`,
-                    details: `Ideal: >7.9 (perfect randomness)\nBased on ${bytes.length} actual bytes`
+                    details: `Ideal: >7.9 (perfect randomness)\nBased on ${bytes.length} bytes`
                 });
                 
-                // Test 2: HEX Character Analysis
                 const hexAnalysis = this.analyzeHexCharacters(hexString);
                 results.push({
                     name: "HEX Character Distribution",
@@ -1246,7 +1068,6 @@
                     details: hexAnalysis
                 });
                 
-                // Test 3: Byte Frequency Analysis
                 const freqReport = this.frequencyAnalysis(hexString);
                 results.push({
                     name: "Byte Range Analysis",
@@ -1255,7 +1076,6 @@
                     details: freqReport
                 });
                 
-                // Test 4: Randomness Tests
                 const randomness = this.testRandomness(hexString);
                 if (typeof randomness !== 'string') {
                     const meanDiff = Math.abs(randomness.mean - randomness.idealMean).toFixed(2);
@@ -1291,7 +1111,6 @@
                 const customCharset = document.getElementById('customCharset');
                 const generateBtn = document.getElementById('generateCharset');
                 const enableMixColumns = document.getElementById('enableMixColumns');
-                const diffusionMode = document.getElementById('diffusionMode');
 
                 encryptBtn.addEventListener('click', () => this.handleEncrypt());
                 decryptBtn.addEventListener('click', () => this.handleDecrypt());
@@ -1309,9 +1128,6 @@
                 generateBtn.addEventListener('click', () => this.handleGenerateCharset());
                 enableMixColumns.addEventListener('change', () => {
                     this.cipher.setMixColumns(enableMixColumns.checked);
-                    this.saveSettings();
-                });
-                diffusionMode.addEventListener('change', () => {
                     this.saveSettings();
                 });
             }
@@ -1404,9 +1220,7 @@
                     diffusionMode: document.getElementById('diffusionMode').value,
                     outputFormat: document.getElementById('outputFormat').value,
                     customCharset: document.getElementById('customCharset').value,
-                    enableMixColumns: document.getElementById('enableMixColumns').checked,
-                    aadData: document.getElementById('aadData').value,
-                    tagLength: document.getElementById('tagLength').value
+                    enableMixColumns: document.getElementById('enableMixColumns').checked
                 };
                 localStorage.setItem('cipherSettings', JSON.stringify(settings));
             }
@@ -1420,8 +1234,6 @@
                     document.getElementById('outputFormat').value = settings.outputFormat;
                     document.getElementById('customCharset').value = settings.customCharset;
                     document.getElementById('enableMixColumns').checked = settings.enableMixColumns;
-                    document.getElementById('aadData').value = settings.aadData || '';
-                    document.getElementById('tagLength').value = settings.tagLength || '128';
                     
                     this.cipher.setMixColumns(settings.enableMixColumns);
                     this.handleOutputFormatChange();
@@ -1449,10 +1261,8 @@
                     const diffusionMode = document.getElementById('diffusionMode').value;
                     const inputData = document.getElementById('inputData').value;
                     const outputFormat = document.getElementById('outputFormat').value;
-                    const enableMixColumns = document.getElementById('enableMixColumns').checked;
 
                     this.cipher.setOutputFormat(outputFormat);
-                    this.cipher.setMixColumns(enableMixColumns);
 
                     if (outputFormat === 'custom') {
                         const charset = document.getElementById('customCharset').value;
@@ -1484,7 +1294,6 @@
                     this.updateSBoxDisplay();
                     this.saveSettings();
 
-                    // Run automatic tests after encryption
                     if (typeof result === 'string' && outputFormat === 'hex') {
                         this.runAutomaticTests(result);
                     } else {
@@ -1551,12 +1360,6 @@
                 }
             }
 
-            arrayToHex(array) {
-                return Array.from(array)
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join('');
-            }
-
             async handleDecrypt() {
                 this.setStatus('processing', 'Decrypting...');
                 this.showLoading('decrypt');
@@ -1566,10 +1369,8 @@
                     const iterations = parseInt(document.getElementById('iterations').value);
                     const diffusionMode = document.getElementById('diffusionMode').value;
                     const outputFormat = document.getElementById('outputFormat').value;
-                    const enableMixColumns = document.getElementById('enableMixColumns').checked;
 
                     this.cipher.setOutputFormat(outputFormat);
-                    this.cipher.setMixColumns(enableMixColumns);
 
                     if (outputFormat === 'custom') {
                         const charset = document.getElementById('customCharset').value;
@@ -1632,8 +1433,8 @@
                         '• 65536-element homophonic S-Box\n' +
                         '• Multiple output formats support\n' +
                         '• Custom character set for steganography\n' +
-                        '• Proper AES MixColumns implementation\n' +
-                        '• Native Web Crypto GCM mode for authentication';
+                        '• AES-style MixColumns transformation\n' +
+                        '• Multiple diffusion modes (CBC, CFB, OFB)';
                 }, 1000);
             }
 
@@ -1665,10 +1466,6 @@
                 info += `Data length: ${length} ${format === 'binary' ? 'bytes' : 'characters'}\n`;
                 info += `S-Box: Deterministic generation\n`;
                 info += `Key: PBKDF2 with fixed salt`;
-                
-                if (diffusionMode === 'gcm') {
-                    info += `\nAuthentication: GCM mode with ${document.getElementById('tagLength').value}-bit tag`;
-                }
                 
                 document.getElementById('securityInfo').textContent = info;
             }
@@ -1713,4 +1510,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
