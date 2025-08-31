@@ -345,6 +345,25 @@
             text-align: center;
             margin-bottom: 10px;
         }
+
+        .mobile-test-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 10000;
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            color: white;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -476,7 +495,7 @@
                     <span id="testStatus" class="status-ready">Ready to test</span>
                 </div>
                 <div id="testResults" class="result-content">
-                    <div class="test-progress" id="testProgress">Waiting to start...</div>
+                    <div class="test-progress" id="testProgress">Click "Run All Tests" to start</div>
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill"></div>
                     </div>
@@ -494,6 +513,12 @@
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
+
+    <!-- Mobile Test Button -->
+    <button class="mobile-test-btn" id="mobileTestBtn" style="display: none;">
+        <span style="font-size: 20px;">🔒</span>
+        Тесты
+    </button>
 
     <script>
         class ConsistentHomophonicCipher {
@@ -1006,7 +1031,7 @@
 
             // 1. ТЕСТ НА ЛАВИННЫЙ ЭФФЕКТ ДЛЯ КЛЮЧА
             async testKeyAvalanche() {
-                await this.updateProgress(0, "Testing Key Avalanche...");
+                await this.updateProgress(10, "Testing Key Avalanche...");
                 const testText = "The quick brown fox jumps over the lazy dog";
                 const key1 = "MySuperSecretKey123!";
                 const key2 = "MySuperSecretKey123\"";
@@ -1037,7 +1062,7 @@
 
             // 2. ТЕСТ НА РАВНОМЕРНОСТЬ ОМОФОНОВ
             async testOmophoneUniformity() {
-                await this.updateProgress(25, "Testing Omophone Uniformity (this may take 10-15 seconds)...");
+                await this.updateProgress(30, "Testing Omophone Uniformity (10,000 encryptions)...");
                 const testByte = 0x41;
                 const numberOfTests = 10000;
                 const homophoneCounts = new Map();
@@ -1045,10 +1070,9 @@
                 await this.cipher.initializeWithKey("TestKeyForUniformity", 100000);
 
                 for (let i = 0; i < numberOfTests; i++) {
-                    // Даем браузеру "подышать" каждые 100 итераций
-                    if (i % 100 === 0) {
-                        await this.updateProgress(25 + Math.floor((i / numberOfTests) * 25), 
-                            `Testing Omophone Uniformity: ${i}/${numberOfTests}`);
+                    if (i % 500 === 0) {
+                        await this.updateProgress(30 + Math.floor((i / numberOfTests) * 40), 
+                            `Omophone test: ${i}/${numberOfTests} (${Math.round((i/numberOfTests)*100)}%)`);
                         await new Promise(resolve => setTimeout(resolve, 0));
                     }
                     
@@ -1089,7 +1113,7 @@
 
             // 3. ТЕСТ НА РАСШИФРОВКУ
             async testDecryptionCorrectness() {
-                await this.updateProgress(50, "Testing Decryption Correctness...");
+                await this.updateProgress(75, "Testing Decryption Correctness...");
                 const testCases = [
                     "Hello World!",
                     "1234567890",
@@ -1121,7 +1145,7 @@
 
             // 4. ТЕСТ НА ДЕТЕРМИНИРОВАННОСТЬ S-BOX
             async testSBoxConsistency() {
-                await this.updateProgress(75, "Testing S-Box Consistency...");
+                await this.updateProgress(5, "Testing S-Box Consistency...");
                 const key = "ConsistencyTestKey";
                 let sBoxFirst = null;
                 let sBoxSecond = null;
@@ -1185,6 +1209,11 @@
                 this.initializeEventListeners();
                 this.updateCharsetPreview();
                 this.loadSettings();
+                
+                // Показываем мобильную кнопку если нужно
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|Mobile/i.test(navigator.userAgent)) {
+                    document.getElementById('mobileTestBtn').style.display = 'flex';
+                }
             }
 
             initializeEventListeners() {
@@ -1193,6 +1222,7 @@
                 const clearBtn = document.getElementById('clearBtn');
                 const analyzeBtn = document.getElementById('analyzeBtn');
                 const runAllTestsBtn = document.getElementById('runAllTestsBtn');
+                const mobileTestBtn = document.getElementById('mobileTestBtn');
                 const outputFormat = document.getElementById('outputFormat');
                 const customCharset = document.getElementById('customCharset');
                 const generateBtn = document.getElementById('generateCharset');
@@ -1202,6 +1232,7 @@
                 clearBtn.addEventListener('click', () => this.handleClear());
                 analyzeBtn.addEventListener('click', () => this.handleAnalyze());
                 runAllTestsBtn.addEventListener('click', () => this.runAllAdvancedTests());
+                mobileTestBtn.addEventListener('click', () => this.runAllAdvancedTests());
                 
                 outputFormat.addEventListener('change', () => {
                     this.handleOutputFormatChange();
@@ -1214,9 +1245,15 @@
                 generateBtn.addEventListener('click', () => this.handleGenerateCharset());
             }
 
-            updateProgress(percent, message) {
-                document.getElementById('progressFill').style.width = percent + '%';
-                document.getElementById('testProgress').textContent = message;
+            async updateProgress(percent, message) {
+                const progressFill = document.getElementById('progressFill');
+                const testProgress = document.getElementById('testProgress');
+                
+                if (progressFill) progressFill.style.width = percent + '%';
+                if (testProgress) testProgress.textContent = message;
+                
+                // Даем интерфейсу обновиться
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
 
             async runAllAdvancedTests() {
@@ -1227,10 +1264,11 @@
                 this.setTestStatus('processing', 'Starting tests...');
                 this.showLoading('analyze');
                 
+                // Инициализируем прогресс-бар
                 document.getElementById('testResults').innerHTML = `
-                    <div class="test-progress" id="testProgress">Initializing tests...</div>
+                    <div class="test-progress" id="testProgress">Initializing test environment...</div>
                     <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        <div class="progress-fill" id="progressFill" style="width: 5%"></div>
                     </div>
                 `;
 
@@ -1238,14 +1276,14 @@
                     const testSuite = new AdvancedTestSuite(this.cipher, this.updateProgress.bind(this));
                     const testResults = await testSuite.runAllTests();
 
-                    await this.updateProgress(90, "Running statistical tests...");
+                    await this.updateProgress(90, "Running statistical analysis...");
                     
                     // Базовые статистические тесты
                     const inputData = "0".repeat(5000);
                     await this.cipher.initializeWithKey("TestKeyForBasicTests", 100000);
                     const encrypted = await this.cipher.encryptData(inputData, 'cbc');
-                    
                     const basicTests = CipherTestSuite.runAllTests(encrypted);
+                    
                     const allResults = [...testResults, ...basicTests];
 
                     await this.updateProgress(100, "Tests completed!");
@@ -1255,6 +1293,7 @@
                 } catch (error) {
                     console.error('Advanced tests failed:', error);
                     this.setTestStatus('error', 'Tests failed: ' + error.message);
+                    await this.updateProgress(0, 'Tests failed: ' + error.message);
                 } finally {
                     this.isTesting = false;
                     this.hideLoading('analyze');
@@ -1633,44 +1672,5 @@
             new CipherUIController();
         });
     </script>
-    <!-- Floating Test Button for Mobile -->
-<div id="mobileTestButton" style="
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    z-index: 10000;
-    display: block;
-">
-    <button onclick="startMobileTests()" style="
-        background: linear-gradient(135deg, #2563eb, #10b981);
-        color: white;
-        padding: 16px 20px;
-        border: none;
-        border-radius: 50px;
-        font-size: 16px;
-        font-weight: bold;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-    ">
-        <span style="font-size: 20px;">🔒</span>
-        Тесты
-    </button>
-</div>
-
-<script>
-function startMobileTests() {
-    if (confirm('Запустить полное тестирование шифрования? Это займет 10-20 секунд.')) {
-        try {
-            const controller = new CipherUIController();
-            controller.runAllAdvancedTests();
-        } catch (error) {
-            alert('Ошибка: ' + error.message);
-        }
-    }
-}
-</script>
 </body>
 </html>
