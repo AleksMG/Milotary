@@ -316,6 +316,10 @@
         .test-warning {
             border-left: 4px solid var(--warning);
         }
+        
+        .test-info {
+            border-left: 4px solid var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -436,7 +440,7 @@
             </div>
         </div>
 
-        <!-- ==================== NEW TESTING SECTION ==================== -->
+        <!-- ==================== TESTING SECTION ==================== -->
         <div class="card">
             <h2 class="card-title">🔬 Automatic Cryptographic Tests</h2>
             
@@ -796,125 +800,165 @@
             }
         }
 
-        // ==================== CRYPTOGRAPHIC TEST SUITE ====================
+        // ==================== FIXED CRYPTOGRAPHIC TEST SUITE FOR HEX ====================
         class CipherTestSuite {
-            static calculateEntropy(data) {
-                const freq = {};
-                for (const char of data) {
-                    freq[char] = (freq[char] || 0) + 1;
+            static hexToBytes(hexString) {
+                const bytes = new Uint8Array(hexString.length / 2);
+                for (let i = 0; i < hexString.length; i += 2) {
+                    bytes[i/2] = parseInt(hexString.substr(i, 2), 16);
                 }
+                return bytes;
+            }
+
+            static calculateEntropy(hexString) {
+                const bytes = this.hexToBytes(hexString);
+                const freq = new Array(256).fill(0);
+                
+                for (const byte of bytes) {
+                    freq[byte]++;
+                }
+                
                 let entropy = 0;
-                const total = data.length;
-                for (const char in freq) {
-                    const p = freq[char] / total;
-                    entropy -= p * Math.log2(p);
+                const total = bytes.length;
+                for (let i = 0; i < 256; i++) {
+                    if (freq[i] > 0) {
+                        const p = freq[i] / total;
+                        entropy -= p * Math.log2(p);
+                    }
                 }
                 return entropy;
             }
 
-            static frequencyAnalysis(data, topN = 20) {
+            static frequencyAnalysis(hexString) {
+                const bytes = this.hexToBytes(hexString);
+                const freq = new Array(256).fill(0);
+                
+                for (const byte of bytes) {
+                    freq[byte]++;
+                }
+                
+                let report = `Real byte analysis (0-255):\n`;
+                report += `Total bytes: ${bytes.length}\n\n`;
+                
+                // Analyze byte ranges
+                const ranges = [
+                    { name: '0-31 (Control chars)', count: 0, ideal: 12.5 },
+                    { name: '32-126 (Printable ASCII)', count: 0, ideal: 37.1 },
+                    { name: '127-255 (Extended)', count: 0, ideal: 50.4 }
+                ];
+                
+                for (let i = 0; i < 256; i++) {
+                    if (i <= 31) ranges[0].count += freq[i];
+                    else if (i <= 126) ranges[1].count += freq[i];
+                    else ranges[2].count += freq[i];
+                }
+                
+                for (const range of ranges) {
+                    const percentage = (range.count / bytes.length * 100).toFixed(2);
+                    const deviation = Math.abs(percentage - range.ideal).toFixed(2);
+                    report += `${range.name}: ${range.count} (${percentage}% | Δ${deviation}%)\n`;
+                }
+                
+                return report;
+            }
+
+            static testRandomness(hexString) {
+                const bytes = this.hexToBytes(hexString);
+                if (bytes.length < 100) return "Need more data for analysis";
+                
+                let sum = 0;
+                for (const byte of bytes) {
+                    sum += byte;
+                }
+                const mean = sum / bytes.length;
+                
+                let variance = 0;
+                for (const byte of bytes) {
+                    variance += Math.pow(byte - mean, 2);
+                }
+                variance /= bytes.length;
+                
+                // Monte Carlo Pi estimation
+                let inCircle = 0;
+                for (let i = 0; i < bytes.length - 1; i += 2) {
+                    const x = bytes[i] / 255;
+                    const y = bytes[i + 1] / 255;
+                    if (x * x + y * y <= 1) inCircle++;
+                }
+                const piEstimate = (4 * inCircle) / (bytes.length / 2);
+                
+                return {
+                    mean: mean.toFixed(3),
+                    variance: variance.toFixed(3),
+                    piEstimate: piEstimate.toFixed(6),
+                    idealMean: 127.5,
+                    idealVariance: 5461.25,
+                    idealPi: 3.141593
+                };
+            }
+
+            static analyzeHexCharacters(hexString) {
                 const freq = {};
-                for (const char of data) {
+                for (const char of hexString) {
                     freq[char] = (freq[char] || 0) + 1;
                 }
                 
                 const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+                let report = `HEX character analysis:\n`;
+                report += `Total HEX chars: ${hexString.length}\n`;
+                report += `Unique HEX chars: ${sorted.length}/16\n\n`;
                 
-                let report = `Total characters: ${data.length}\nUnique characters: ${sorted.length}\n\nTop ${topN} most frequent:\n`;
-                for (let i = 0; i < Math.min(topN, sorted.length); i++) {
-                    const [char, count] = sorted[i];
-                    const percentage = (count / data.length * 100).toFixed(3);
+                report += `HEX character frequency:\n`;
+                for (const [char, count] of sorted) {
+                    const percentage = (count / hexString.length * 100).toFixed(2);
                     report += `'${char}': ${count} (${percentage}%)\n`;
                 }
+                
                 return report;
             }
 
-            static async runAvalancheTest(cipher, sampleText, key, outputFormat) {
-                await cipher.initializeWithKey(key);
-                const originalResult = await cipher.encryptData(sampleText, 'cbc');
-                
-                const modifiedText = sampleText.slice(0, -1) + 
-                    String.fromCharCode(sampleText.charCodeAt(sampleText.length - 1) ^ 1);
-                
-                const modifiedResult = await cipher.encryptData(modifiedText, 'cbc');
-                
-                let difference = 0;
-                const minLength = Math.min(originalResult.length, modifiedResult.length);
-                
-                for (let i = 0; i < minLength; i++) {
-                    if (originalResult[i] !== modifiedResult[i]) {
-                        difference++;
-                    }
-                }
-                
-                const differencePercentage = (difference / minLength * 100).toFixed(2);
-                return differencePercentage;
-            }
-
-            static testRandomness(data) {
-                if (data.length < 100) return "Insufficient data for randomness test";
-                
-                const byteValues = [];
-                if (typeof data === 'string') {
-                    for (let i = 0; i < data.length; i++) {
-                        byteValues.push(data.charCodeAt(i));
-                    }
-                } else if (data instanceof Uint8Array) {
-                    byteValues.push(...data);
-                }
-                
-                // Simple randomness tests
-                let sum = 0;
-                for (const byte of byteValues) {
-                    sum += byte;
-                }
-                const mean = sum / byteValues.length;
-                
-                let variance = 0;
-                for (const byte of byteValues) {
-                    variance += Math.pow(byte - mean, 2);
-                }
-                variance /= byteValues.length;
-                
-                return {
-                    mean: mean.toFixed(2),
-                    variance: variance.toFixed(2),
-                    idealMean: 127.5,
-                    idealVariance: 5461.25 // Variance of uniform distribution 0-255
-                };
-            }
-
-            static runAllTests(encryptedData, cipher, originalText, key, outputFormat) {
+            static runAllTests(hexString) {
                 const results = [];
+                const bytes = this.hexToBytes(hexString);
                 
                 // Test 1: Entropy Test
-                const entropy = this.calculateEntropy(encryptedData);
+                const entropy = this.calculateEntropy(hexString);
                 results.push({
-                    name: "Entropy Test",
+                    name: "Byte Entropy Test",
                     status: entropy > 7.9 ? "PASS" : "WARNING",
-                    message: `Entropy: ${entropy.toFixed(6)}/8.000000 ${entropy > 7.9 ? "✓" : "⚠"}`,
-                    details: `Ideal: >7.9 (perfect randomness)`
+                    message: `Entropy: ${entropy.toFixed(6)}/8.000000`,
+                    details: `Ideal: >7.9 (perfect randomness)\nBased on ${bytes.length} actual bytes`
                 });
                 
-                // Test 2: Frequency Analysis
-                const freqReport = this.frequencyAnalysis(encryptedData);
-                const uniqueChars = new Set(encryptedData).size;
+                // Test 2: HEX Character Analysis
+                const hexAnalysis = this.analyzeHexCharacters(hexString);
                 results.push({
-                    name: "Frequency Distribution",
-                    status: uniqueChars > 100 ? "PASS" : "WARNING",
-                    message: `Unique characters: ${uniqueChars} ${uniqueChars > 100 ? "✓" : "⚠"}`,
+                    name: "HEX Character Distribution",
+                    status: "INFO",
+                    message: "Analysis of HEX characters (0-9, a-f)",
+                    details: hexAnalysis
+                });
+                
+                // Test 3: Byte Frequency Analysis
+                const freqReport = this.frequencyAnalysis(hexString);
+                results.push({
+                    name: "Byte Range Analysis",
+                    status: "INFO",
+                    message: "Analysis of actual byte values (0-255)",
                     details: freqReport
                 });
                 
-                // Test 3: Randomness Test
-                const randomness = this.testRandomness(encryptedData);
+                // Test 4: Randomness Tests
+                const randomness = this.testRandomness(hexString);
                 if (typeof randomness !== 'string') {
-                    const meanDiff = Math.abs(randomness.mean - randomness.idealMean);
+                    const meanDiff = Math.abs(randomness.mean - randomness.idealMean).toFixed(2);
+                    const piDiff = Math.abs(randomness.piEstimate - randomness.idealPi).toFixed(4);
+                    
                     results.push({
-                        name: "Randomness Test",
-                        status: meanDiff < 5 ? "PASS" : "WARNING",
-                        message: `Mean: ${randomness.mean} (Ideal: ${randomness.idealMean}) ${meanDiff < 5 ? "✓" : "⚠"}`,
-                        details: `Variance: ${randomness.variance} (Ideal: ${randomness.idealVariance})`
+                        name: "Statistical Randomness",
+                        status: meanDiff < 5 && piDiff < 0.1 ? "PASS" : "WARNING",
+                        message: `Mean: ${randomness.mean} | π≈${randomness.piEstimate}`,
+                        details: `Mean Δ: ${meanDiff} | π Δ: ${piDiff}\nIdeal mean: 127.5, variance: 5461.25`
                     });
                 }
                 
@@ -1115,7 +1159,11 @@
                     this.saveSettings();
 
                     // Run automatic tests after encryption
-                    this.runAutomaticTests(result, inputData, passphrase, outputFormat);
+                    if (typeof result === 'string' && outputFormat === 'hex') {
+                        this.runAutomaticTests(result);
+                    } else {
+                        this.setTestStatus('ready', 'Tests available only for HEX output');
+                    }
 
                     this.setStatus('ready', 'Encryption successful');
                 } catch (error) {
@@ -1126,19 +1174,12 @@
                 }
             }
 
-            async runAutomaticTests(encryptedData, originalText, key, outputFormat) {
-                this.setTestStatus('processing', 'Running tests...');
+            async runAutomaticTests(hexString) {
+                this.setTestStatus('processing', 'Running cryptographic tests...');
                 
-                setTimeout(async () => {
+                setTimeout(() => {
                     try {
-                        const testResults = CipherTestSuite.runAllTests(
-                            encryptedData, 
-                            this.cipher, 
-                            originalText, 
-                            key, 
-                            outputFormat
-                        );
-                        
+                        const testResults = CipherTestSuite.runAllTests(hexString);
                         this.displayTestResults(testResults);
                         this.setTestStatus('ready', 'Tests completed');
                     } catch (error) {
@@ -1154,7 +1195,8 @@
                 results.forEach(test => {
                     const testDiv = document.createElement('div');
                     testDiv.className = `test-result ${test.status === 'PASS' ? 'test-pass' : 
-                                       test.status === 'FAIL' ? 'test-fail' : 'test-warning'}`;
+                                       test.status === 'FAIL' ? 'test-fail' : 
+                                       test.status === 'WARNING' ? 'test-warning' : 'test-info'}`;
                     
                     testDiv.innerHTML = `
                         <strong>${test.name}</strong>: ${test.status}
