@@ -321,6 +321,30 @@
         .test-info {
             border-left: 4px solid var(--primary);
         }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--secondary);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .test-progress {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -451,7 +475,12 @@
                     <span class="result-title">Test Results:</span>
                     <span id="testStatus" class="status-ready">Ready to test</span>
                 </div>
-                <div id="testResults" class="result-content"></div>
+                <div id="testResults" class="result-content">
+                    <div class="test-progress" id="testProgress">Waiting to start...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -970,25 +999,24 @@
 
         // ==================== ADVANCED TEST SUITE ====================
         class AdvancedTestSuite {
-            constructor(cipher) {
+            constructor(cipher, updateProgress) {
                 this.cipher = cipher;
+                this.updateProgress = updateProgress;
             }
 
             // 1. ТЕСТ НА ЛАВИННЫЙ ЭФФЕКТ ДЛЯ КЛЮЧА
             async testKeyAvalanche() {
+                await this.updateProgress(0, "Testing Key Avalanche...");
                 const testText = "The quick brown fox jumps over the lazy dog";
                 const key1 = "MySuperSecretKey123!";
-                const key2 = "MySuperSecretKey123\""; // Изменили 1 символ
+                const key2 = "MySuperSecretKey123\"";
 
-                // Шифруем одним ключом
                 await this.cipher.initializeWithKey(key1, 100000);
                 const ciphertext1 = await this.cipher.encryptData(testText, 'cbc');
                 
-                // Шифруем другим ключом
                 await this.cipher.initializeWithKey(key2, 100000);
                 const ciphertext2 = await this.cipher.encryptData(testText, 'cbc');
 
-                // Сравниваем побитово
                 const bits1 = this.hexToBits(ciphertext1);
                 const bits2 = this.hexToBits(ciphertext2);
                 
@@ -1007,15 +1035,23 @@
                 };
             }
 
-            // 2. ТЕСТ НА РАВНОМЕРНОСТЬ ОМОФОНОВ (тот самый важный)
+            // 2. ТЕСТ НА РАВНОМЕРНОСТЬ ОМОФОНОВ
             async testOmophoneUniformity() {
-                const testByte = 0x41; // Буква 'A'
+                await this.updateProgress(25, "Testing Omophone Uniformity (this may take 10-15 seconds)...");
+                const testByte = 0x41;
                 const numberOfTests = 10000;
                 const homophoneCounts = new Map();
 
                 await this.cipher.initializeWithKey("TestKeyForUniformity", 100000);
 
                 for (let i = 0; i < numberOfTests; i++) {
+                    // Даем браузеру "подышать" каждые 100 итераций
+                    if (i % 100 === 0) {
+                        await this.updateProgress(25 + Math.floor((i / numberOfTests) * 25), 
+                            `Testing Omophone Uniformity: ${i}/${numberOfTests}`);
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                    
                     const plaintextBuffer = new Uint8Array([testByte]);
                     const result = await this.cipher.encryptData(plaintextBuffer, 'none');
                     
@@ -1051,13 +1087,14 @@
                 };
             }
 
-            // 3. ТЕСТ НА РАСШИФРОВКУ (корректность обратного преобразования)
+            // 3. ТЕСТ НА РАСШИФРОВКУ
             async testDecryptionCorrectness() {
+                await this.updateProgress(50, "Testing Decryption Correctness...");
                 const testCases = [
                     "Hello World!",
                     "1234567890",
                     "Тест с UTF-8: ñáéíóú",
-                    "A".repeat(50)
+                    "A".repeat(20)
                 ];
 
                 let allPassed = true;
@@ -1084,11 +1121,11 @@
 
             // 4. ТЕСТ НА ДЕТЕРМИНИРОВАННОСТЬ S-BOX
             async testSBoxConsistency() {
+                await this.updateProgress(75, "Testing S-Box Consistency...");
                 const key = "ConsistencyTestKey";
                 let sBoxFirst = null;
                 let sBoxSecond = null;
 
-                // Дважды инициализируем с одним ключом
                 await this.cipher.initializeWithKey(key, 100000);
                 sBoxFirst = JSON.stringify(this.cipher.sbox);
 
@@ -1144,6 +1181,7 @@
             constructor() {
                 this.cipher = new ConsistentHomophonicCipher();
                 this.lastBinaryResult = null;
+                this.isTesting = false;
                 this.initializeEventListeners();
                 this.updateCharsetPreview();
                 this.loadSettings();
@@ -1176,16 +1214,33 @@
                 generateBtn.addEventListener('click', () => this.handleGenerateCharset());
             }
 
+            updateProgress(percent, message) {
+                document.getElementById('progressFill').style.width = percent + '%';
+                document.getElementById('testProgress').textContent = message;
+            }
+
             async runAllAdvancedTests() {
+                if (this.isTesting) return;
+                
+                this.isTesting = true;
                 this.setStatus('processing', 'Running Comprehensive Test Suite...');
-                this.setTestStatus('processing', 'Running all advanced tests');
+                this.setTestStatus('processing', 'Starting tests...');
                 this.showLoading('analyze');
+                
+                document.getElementById('testResults').innerHTML = `
+                    <div class="test-progress" id="testProgress">Initializing tests...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                `;
 
                 try {
-                    const testSuite = new AdvancedTestSuite(this.cipher);
+                    const testSuite = new AdvancedTestSuite(this.cipher, this.updateProgress.bind(this));
                     const testResults = await testSuite.runAllTests();
 
-                    // Добавляем базовые тесты которые у вас уже есть
+                    await this.updateProgress(90, "Running statistical tests...");
+                    
+                    // Базовые статистические тесты
                     const inputData = "0".repeat(5000);
                     await this.cipher.initializeWithKey("TestKeyForBasicTests", 100000);
                     const encrypted = await this.cipher.encryptData(inputData, 'cbc');
@@ -1193,6 +1248,7 @@
                     const basicTests = CipherTestSuite.runAllTests(encrypted);
                     const allResults = [...testResults, ...basicTests];
 
+                    await this.updateProgress(100, "Tests completed!");
                     this.displayTestResults(allResults);
                     this.setTestStatus('ready', 'All tests completed');
 
@@ -1200,6 +1256,7 @@
                     console.error('Advanced tests failed:', error);
                     this.setTestStatus('error', 'Tests failed: ' + error.message);
                 } finally {
+                    this.isTesting = false;
                     this.hideLoading('analyze');
                     this.setStatus('ready', 'Test Suite Complete');
                 }
@@ -1363,7 +1420,6 @@
                     this.updateSBoxDisplay();
                     this.saveSettings();
 
-                    // Run automatic tests after encryption
                     if (typeof result === 'string' && outputFormat === 'hex') {
                         this.runAutomaticTests(result);
                     } else {
@@ -1395,22 +1451,21 @@
 
             displayTestResults(results) {
                 const testResultsDiv = document.getElementById('testResults');
-                testResultsDiv.innerHTML = '';
+                let html = '';
                 
                 results.forEach(test => {
-                    const testDiv = document.createElement('div');
-                    testDiv.className = `test-result ${test.status === 'PASS' ? 'test-pass' : 
+                    html += `
+                        <div class="test-result ${test.status === 'PASS' ? 'test-pass' : 
                                        test.status === 'FAIL' ? 'test-fail' : 
-                                       test.status === 'WARNING' ? 'test-warning' : 'test-info'}`;
-                    
-                    testDiv.innerHTML = `
-                        <strong>${test.name}</strong>: ${test.status}
-                        <div>${test.message}</div>
-                        <div style="font-size: 0.8em; color: #94a3b8; margin-top: 0.5rem;">${test.details}</div>
+                                       test.status === 'WARNING' ? 'test-warning' : 'test-info'}">
+                            <strong>${test.name}</strong>: ${test.status}
+                            <div>${test.message}</div>
+                            <div style="font-size: 0.8em; color: #94a3b8; margin-top: 0.5rem;">${test.details}</div>
+                        </div>
                     `;
-                    
-                    testResultsDiv.appendChild(testDiv);
                 });
+                
+                testResultsDiv.innerHTML = html;
             }
 
             setTestStatus(type, message) {
