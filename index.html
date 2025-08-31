@@ -1633,5 +1633,44 @@
             new CipherUIController();
         });
     </script>
+    <!-- Floating Test Button for Mobile -->
+<div id="mobileTestButton" style="
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 10000;
+    display: block;
+">
+    <button onclick="startMobileTests()" style="
+        background: linear-gradient(135deg, #2563eb, #10b981);
+        color: white;
+        padding: 16px 20px;
+        border: none;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+    ">
+        <span style="font-size: 20px;">🔒</span>
+        Тесты
+    </button>
+</div>
+
+<script>
+function startMobileTests() {
+    if (confirm('Запустить полное тестирование шифрования? Это займет 10-20 секунд.')) {
+        try {
+            const controller = new CipherUIController();
+            controller.runAllAdvancedTests();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
+    }
+}
+</script>
 </body>
 </html>
