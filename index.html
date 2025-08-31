@@ -187,6 +187,7 @@
             justify-content: between;
             align-items: center;
             margin-bottom: 0.5rem;
+            flex-wrap: wrap;
         }
         
         .result-title {
@@ -410,6 +411,7 @@
                 <div class="btn-group">
                     <button id="clearBtn" class="btn-danger">Clear All</button>
                     <button id="analyzeBtn" class="btn-warning">Security Analysis</button>
+                    <button id="runAllTestsBtn" class="btn-warning">Run All Tests</button>
                 </div>
             </div>
         </div>
@@ -966,6 +968,178 @@
             }
         }
 
+        // ==================== ADVANCED TEST SUITE ====================
+        class AdvancedTestSuite {
+            constructor(cipher) {
+                this.cipher = cipher;
+            }
+
+            // 1. ТЕСТ НА ЛАВИННЫЙ ЭФФЕКТ ДЛЯ КЛЮЧА
+            async testKeyAvalanche() {
+                const testText = "The quick brown fox jumps over the lazy dog";
+                const key1 = "MySuperSecretKey123!";
+                const key2 = "MySuperSecretKey123\""; // Изменили 1 символ
+
+                // Шифруем одним ключом
+                await this.cipher.initializeWithKey(key1, 100000);
+                const ciphertext1 = await this.cipher.encryptData(testText, 'cbc');
+                
+                // Шифруем другим ключом
+                await this.cipher.initializeWithKey(key2, 100000);
+                const ciphertext2 = await this.cipher.encryptData(testText, 'cbc');
+
+                // Сравниваем побитово
+                const bits1 = this.hexToBits(ciphertext1);
+                const bits2 = this.hexToBits(ciphertext2);
+                
+                let diffCount = 0;
+                for (let i = 0; i < Math.min(bits1.length, bits2.length); i++) {
+                    if (bits1[i] !== bits2[i]) diffCount++;
+                }
+
+                const diffPercent = (diffCount / Math.min(bits1.length, bits2.length)) * 100;
+                
+                return {
+                    name: "Key Avalanche Test",
+                    status: diffPercent > 45 && diffPercent < 55 ? "PASS" : "WARNING",
+                    message: `Difference: ${diffPercent.toFixed(2)}% (ideal: ~50%)`,
+                    details: `Changed 1 character in key, compared ${bits1.length} bits.\nIdeal range: 45-55% difference.`
+                };
+            }
+
+            // 2. ТЕСТ НА РАВНОМЕРНОСТЬ ОМОФОНОВ (тот самый важный)
+            async testOmophoneUniformity() {
+                const testByte = 0x41; // Буква 'A'
+                const numberOfTests = 10000;
+                const homophoneCounts = new Map();
+
+                await this.cipher.initializeWithKey("TestKeyForUniformity", 100000);
+
+                for (let i = 0; i < numberOfTests; i++) {
+                    const plaintextBuffer = new Uint8Array([testByte]);
+                    const result = await this.cipher.encryptData(plaintextBuffer, 'none');
+                    
+                    const fullBuffer = this.hexToArray(result);
+                    const homophoneBytes = fullBuffer.slice(16, 18);
+                    const homophoneValue = (homophoneBytes[0] << 8) | homophoneBytes[1];
+                    
+                    homophoneCounts.set(homophoneValue, (homophoneCounts.get(homophoneValue) || 0) + 1);
+                }
+
+                const expectedHomophones = this.cipher.sbox[testByte];
+                let minCount = numberOfTests;
+                let maxCount = 0;
+                let totalUsed = 0;
+
+                for (const homophone of expectedHomophones) {
+                    const count = homophoneCounts.get(homophone) || 0;
+                    totalUsed += count;
+                    if (count < minCount) minCount = count;
+                    if (count > maxCount) maxCount = count;
+                }
+
+                const avgCount = totalUsed / 256;
+                const deviation = ((maxCount - minCount) / avgCount) * 100;
+
+                return {
+                    name: "Omophone Uniformity Test",
+                    status: deviation < 25 ? "PASS" : "FAIL",
+                    message: `Spread: ${deviation.toFixed(2)}% (max-min difference)`,
+                    details: `Tested byte: 0x${testByte.toString(16)} (${String.fromCharCode(testByte)})\n` +
+                           `Tests: ${numberOfTests}, Unique omophones: ${homophoneCounts.size}/256\n` +
+                           `Min: ${minCount}, Max: ${maxCount}, Avg: ${avgCount.toFixed(1)}`
+                };
+            }
+
+            // 3. ТЕСТ НА РАСШИФРОВКУ (корректность обратного преобразования)
+            async testDecryptionCorrectness() {
+                const testCases = [
+                    "Hello World!",
+                    "1234567890",
+                    "Тест с UTF-8: ñáéíóú",
+                    "A".repeat(50)
+                ];
+
+                let allPassed = true;
+                let details = "";
+
+                for (const testText of testCases) {
+                    await this.cipher.initializeWithKey("TestDecryptionKey", 100000);
+                    const encrypted = await this.cipher.encryptData(testText, 'cbc');
+                    const decrypted = await this.cipher.decryptData(encrypted, 'cbc');
+                    
+                    if (decrypted !== testText) {
+                        allPassed = false;
+                        details += `FAIL: "${testText}" -> "${decrypted}"\n`;
+                    }
+                }
+
+                return {
+                    name: "Decryption Correctness Test",
+                    status: allPassed ? "PASS" : "FAIL",
+                    message: allPassed ? "All test cases passed" : "Decryption failed for some cases",
+                    details: details || "All test cases decrypted correctly."
+                };
+            }
+
+            // 4. ТЕСТ НА ДЕТЕРМИНИРОВАННОСТЬ S-BOX
+            async testSBoxConsistency() {
+                const key = "ConsistencyTestKey";
+                let sBoxFirst = null;
+                let sBoxSecond = null;
+
+                // Дважды инициализируем с одним ключом
+                await this.cipher.initializeWithKey(key, 100000);
+                sBoxFirst = JSON.stringify(this.cipher.sbox);
+
+                await this.cipher.initializeWithKey(key, 100000);
+                sBoxSecond = JSON.stringify(this.cipher.sbox);
+
+                const isConsistent = sBoxFirst === sBoxSecond;
+
+                return {
+                    name: "S-Box Consistency Test",
+                    status: isConsistent ? "PASS" : "FAIL",
+                    message: isConsistent ? "S-Box is deterministic" : "S-Box generation is inconsistent",
+                    details: `S-Box generated from the same key must be identical.\n` +
+                           `Result: ${isConsistent ? "IDENTICAL" : "DIFFERENT"}`
+                };
+            }
+
+            // Вспомогательные методы
+            hexToBits(hexString) {
+                const bits = [];
+                for (const hexChar of hexString) {
+                    const decimal = parseInt(hexChar, 16);
+                    bits.push((decimal >> 3) & 1);
+                    bits.push((decimal >> 2) & 1);
+                    bits.push((decimal >> 1) & 1);
+                    bits.push(decimal & 1);
+                }
+                return bits;
+            }
+
+            hexToArray(hexString) {
+                const result = new Uint8Array(hexString.length / 2);
+                for (let i = 0; i < hexString.length; i += 2) {
+                    result[i/2] = parseInt(hexString.substr(i, 2), 16);
+                }
+                return result;
+            }
+
+            // ГЛАВНЫЙ МЕТОД - ЗАПУСК ВСЕХ ТЕСТОВ
+            async runAllTests() {
+                const results = [];
+                
+                results.push(await this.testSBoxConsistency());
+                results.push(await this.testDecryptionCorrectness());
+                results.push(await this.testKeyAvalanche());
+                results.push(await this.testOmophoneUniformity());
+
+                return results;
+            }
+        }
+
         class CipherUIController {
             constructor() {
                 this.cipher = new ConsistentHomophonicCipher();
@@ -980,6 +1154,7 @@
                 const decryptBtn = document.getElementById('decryptBtn');
                 const clearBtn = document.getElementById('clearBtn');
                 const analyzeBtn = document.getElementById('analyzeBtn');
+                const runAllTestsBtn = document.getElementById('runAllTestsBtn');
                 const outputFormat = document.getElementById('outputFormat');
                 const customCharset = document.getElementById('customCharset');
                 const generateBtn = document.getElementById('generateCharset');
@@ -988,6 +1163,7 @@
                 decryptBtn.addEventListener('click', () => this.handleDecrypt());
                 clearBtn.addEventListener('click', () => this.handleClear());
                 analyzeBtn.addEventListener('click', () => this.handleAnalyze());
+                runAllTestsBtn.addEventListener('click', () => this.runAllAdvancedTests());
                 
                 outputFormat.addEventListener('change', () => {
                     this.handleOutputFormatChange();
@@ -998,6 +1174,35 @@
                     this.saveSettings();
                 });
                 generateBtn.addEventListener('click', () => this.handleGenerateCharset());
+            }
+
+            async runAllAdvancedTests() {
+                this.setStatus('processing', 'Running Comprehensive Test Suite...');
+                this.setTestStatus('processing', 'Running all advanced tests');
+                this.showLoading('analyze');
+
+                try {
+                    const testSuite = new AdvancedTestSuite(this.cipher);
+                    const testResults = await testSuite.runAllTests();
+
+                    // Добавляем базовые тесты которые у вас уже есть
+                    const inputData = "0".repeat(5000);
+                    await this.cipher.initializeWithKey("TestKeyForBasicTests", 100000);
+                    const encrypted = await this.cipher.encryptData(inputData, 'cbc');
+                    
+                    const basicTests = CipherTestSuite.runAllTests(encrypted);
+                    const allResults = [...testResults, ...basicTests];
+
+                    this.displayTestResults(allResults);
+                    this.setTestStatus('ready', 'All tests completed');
+
+                } catch (error) {
+                    console.error('Advanced tests failed:', error);
+                    this.setTestStatus('error', 'Tests failed: ' + error.message);
+                } finally {
+                    this.hideLoading('analyze');
+                    this.setStatus('ready', 'Test Suite Complete');
+                }
             }
 
             handleOutputFormatChange() {
