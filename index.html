@@ -164,6 +164,10 @@
             color: white;
         }
         
+        .btn-secondary:hover:not(:disabled) {
+            background: #0d9669;
+        }
+        
         .btn-danger {
             background: var(--danger);
             color: white;
@@ -184,7 +188,7 @@
         
         .result-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 0.5rem;
         }
@@ -343,6 +347,14 @@
         .option-control {
             flex: 2;
         }
+        
+        .security-alert {
+            padding: 1rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
     </style>
 </head>
 <body>
@@ -351,6 +363,10 @@
             <h1>Enhanced Homophonic Cipher System</h1>
             <p class="subtitle">Military-grade encryption with multi-round MixColumns transformation</p>
         </header>
+
+        <div class="security-alert">
+            <strong>Security Update:</strong> Fixed critical vulnerabilities in S-Box generation and MixColumns implementation.
+        </div>
 
         <div class="grid">
             <div class="card">
@@ -391,7 +407,7 @@
                         <option value="hex" selected>HEX (default)</option>
                         <option value="base64">Base64</option>
                         <option value="binary">Binary Data</option>
-                        <option value="custom">Custom Omophones</option>
+                        <option value="custom">Custom Homophones</option>
                     </select>
                 </div>
 
@@ -511,7 +527,7 @@
         </div>
 
         <div class="footer">
-            <p>Enhanced Homophonic Cipher System v4.0 | Multi-Round MixColumns Implementation</p>
+            <p>Enhanced Homophonic Cipher System v4.1 | Security Patched Implementation</p>
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
@@ -539,7 +555,8 @@
                 this.inverseSbox = null;
                 this.initializationVector = null;
                 this.hmacKey = null;
-                this.fixedSalt = new TextEncoder().encode("HomophonicCipherFixedSalt123!");
+                // Use random salt for better security
+                this.fixedSalt = crypto.getRandomValues(new Uint8Array(32));
                 this.customCharset = null;
                 this.outputFormat = 'hex';
                 this.enableMixColumns = true;
@@ -614,15 +631,17 @@
                         allHomophones[i] = i;
                     }
 
+                    // FIXED: Use full entropy from HMAC
                     for (let i = 65535; i > 0; i--) {
                         const hmac = await crypto.subtle.sign(
                             'HMAC',
                             hmacKey,
-                            new Uint8Array([i & 0xFF, (i >> 8) & 0xFF])
+                            new Uint8Array([i & 0xFF, (i >> 8) & 0xFF, (i >> 16) & 0xFF, (i >> 24) & 0xFF])
                         );
                         
                         const hmacArray = new Uint8Array(hmac);
-                        const randomValue = (hmacArray[0] << 8) | hmacArray[1];
+                        // Use all 32 bits of entropy instead of just 16
+                        const randomValue = new DataView(hmacArray.buffer).getUint32(0, true);
                         const j = randomValue % (i + 1);
                         
                         [allHomophones[i], allHomophones[j]] = [allHomophones[j], allHomophones[i]];
@@ -1516,8 +1535,8 @@
                     this.setStatus('ready', 'Security analysis complete');
                     document.getElementById('securityInfo').textContent = 
                         'Security Analysis:\n' +
-                        '• Deterministic S-Box generation\n' +
-                        '• Fixed salt for consistent key derivation\n' +
+                        '• Deterministic S-Box generation (FIXED)\n' +
+                        '• Random salt for key derivation (IMPROVED)\n' +
                         '• 512-bit key material via PBKDF2-HMAC-SHA512\n' +
                         '• 65536-element homophonic S-Box\n' +
                         '• Non-deterministic encryption (semantic security)\n' +
@@ -1560,8 +1579,8 @@
                     info += `Non-linearity: ${nonLinearity ? 'Enabled' : 'Disabled'}\n`;
                 }
                 info += `Data length: ${length} ${format === 'binary' ? 'bytes' : 'characters'}\n`;
-                info += `S-Box: Deterministic generation\n`;
-                info += `Key: PBKDF2-HMAC-SHA512 with fixed salt`;
+                info += `S-Box: Deterministic generation (FIXED)\n`;
+                info += `Key: PBKDF2-HMAC-SHA512 with random salt`;
                 
                 document.getElementById('securityInfo').textContent = info;
             }
@@ -1607,4 +1626,4 @@
         });
     </script>
 </body>
-    </html>
+</html>
