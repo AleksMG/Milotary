@@ -541,24 +541,19 @@
                 const inverseSbox = new Map();
                 
                 const hmacKey = await crypto.subtle.importKey(
-                    'raw',
-                    encryptionKey,
-                    { name: 'HMAC', hash: 'SHA-256' },
-                    false,
-                    ['sign']
+                    'raw', encryptionKey,
+                    { name: 'HMAC', hash: 'SHA-512' },
+                    false, ['sign']
                 );
                 
-                const allHomophones = new Array(65536);
-                for (let i = 0; i < 65536; i++) {
-                    allHomophones[i] = i;
-                }
+                const allHomophones = Array.from({length: 65536}, (_, i) => i);
+                await this.fastDeterministicShuffle(allHomophones, hmacKey);
                 
-                await this.deterministicShuffle(allHomophones, hmacKey);
-                
+                let index = 0;
                 for (let inputByte = 0; inputByte < 256; inputByte++) {
                     sbox[inputByte] = new Array(256);
                     for (let homophoneIndex = 0; homophoneIndex < 256; homophoneIndex++) {
-                        const homophone = allHomophones[inputByte * 256 + homophoneIndex];
+                        const homophone = allHomophones[index++];
                         sbox[inputByte][homophoneIndex] = homophone;
                         inverseSbox.set(homophone, inputByte);
                     }
@@ -567,18 +562,24 @@
                 return { sbox, inverseSbox };
             }
             
-            static async deterministicShuffle(array, hmacKey) {
+            static async fastDeterministicShuffle(array, hmacKey) {
+                let counter = 0;
+                let randomBuffer = new Uint8Array(0);
+                let position = 0;
+                
                 for (let i = array.length - 1; i > 0; i--) {
-                    const j = await this.getDeterministicIndex(i + 1, hmacKey, i);
+                    if (position >= randomBuffer.length - 1) {
+                        const counterData = new Uint8Array([counter++]);
+                        randomBuffer = await crypto.subtle.sign('HMAC', hmacKey, counterData);
+                        position = 0;
+                    }
+                    
+                    const rand = (randomBuffer[position] << 8) | randomBuffer[position + 1];
+                    position += 2;
+                    
+                    const j = rand % (i + 1);
                     [array[i], array[j]] = [array[j], array[i]];
                 }
-            }
-            
-            static async getDeterministicIndex(max, hmacKey, seed) {
-                const data = new Uint32Array([seed]);
-                const hmac = await crypto.subtle.sign('HMAC', hmacKey, data);
-                const view = new DataView(hmac);
-                return view.getUint32(0) % max;
             }
         }
 
@@ -612,8 +613,7 @@
                     const salt = await crypto.subtle.digest('SHA-256', passphraseBuffer);
                     
                     const importedKey = await crypto.subtle.importKey(
-                        'raw',
-                        passphraseBuffer,
+                        'raw', passphraseBuffer,
                         { name: 'PBKDF2' },
                         false,
                         ['deriveBits', 'deriveKey']
@@ -632,7 +632,6 @@
 
                     const derivedBuffer = new Uint8Array(derivedBits);
                     const encryptionKey = derivedBuffer.slice(0, 32);
-                    this.hmacKey = derivedBuffer.slice(32, 64);
 
                     const { sbox, inverseSbox } = await DeterministicSBoxGenerator.generateSBox(encryptionKey);
                     this.sbox = sbox;
