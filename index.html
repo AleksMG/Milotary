@@ -547,7 +547,7 @@
                 const hmacKey = await crypto.subtle.importKey(
                     'raw',
                     encryptionKey,
-                    { name: 'HMAC', hash: 'SHA-256' },
+                    { name: 'HMAC', hash: 'SHA-512' },
                     false,
                     ['sign']
                 );
