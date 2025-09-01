@@ -347,14 +347,6 @@
         .option-control {
             flex: 2;
         }
-        
-        .security-alert {
-            padding: 1rem;
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid var(--danger);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
     </style>
 </head>
 <body>
@@ -363,10 +355,6 @@
             <h1>Enhanced Homophonic Cipher System</h1>
             <p class="subtitle">Military-grade encryption with multi-round MixColumns transformation</p>
         </header>
-
-        <div class="security-alert">
-            <strong>Security Update:</strong> Fixed critical vulnerabilities in S-Box generation and MixColumns implementation.
-        </div>
 
         <div class="grid">
             <div class="card">
@@ -527,13 +515,12 @@
         </div>
 
         <div class="footer">
-            <p>Enhanced Homophonic Cipher System v4.1 | Security Patched Implementation</p>
+            <p>Enhanced Homophonic Cipher System v4.2 | Optimized Implementation</p>
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
 
     <script>
-        // Enhanced Galois Field implementation
         class GaloisField {
             static multiply(a, b) {
                 let p = 0;
@@ -548,14 +535,51 @@
             }
         }
 
-        // Enhanced Homophonic Cipher with Multi-Round MixColumns
+        class OptimizedSBoxGenerator {
+            constructor() {
+                this.entropyPool = new Uint8Array(0);
+                this.poolOffset = 0;
+                this.counter = 0;
+            }
+            
+            async refillPool(hmacKey) {
+                const input = new Uint8Array(4);
+                new DataView(input.buffer).setUint32(0, this.counter++, true);
+                
+                const hmac = await crypto.subtle.sign('HMAC', hmacKey, input);
+                this.entropyPool = new Uint8Array(hmac);
+                this.poolOffset = 0;
+            }
+            
+            async getUniformRandom(max, hmacKey) {
+                const bitsNeeded = Math.ceil(Math.log2(max));
+                const bytesNeeded = Math.ceil(bitsNeeded / 8);
+                const mask = (1 << bitsNeeded) - 1;
+                
+                let randomValue;
+                do {
+                    if (this.entropyPool.length - this.poolOffset < bytesNeeded) {
+                        await this.refillPool(hmacKey);
+                    }
+                    
+                    randomValue = 0;
+                    for (let i = 0; i < bytesNeeded; i++) {
+                        randomValue = (randomValue << 8) | this.entropyPool[this.poolOffset++];
+                    }
+                    randomValue &= mask;
+                    
+                } while (randomValue >= max);
+                
+                return randomValue;
+            }
+        }
+
         class EnhancedHomophonicCipher {
             constructor() {
                 this.sbox = null;
                 this.inverseSbox = null;
                 this.initializationVector = null;
                 this.hmacKey = null;
-                // Use random salt for better security
                 this.fixedSalt = crypto.getRandomValues(new Uint8Array(32));
                 this.customCharset = null;
                 this.outputFormat = 'hex';
@@ -623,29 +647,20 @@
                         ['sign']
                     );
 
-                    this.sbox = new Array(256);
-                    this.inverseSbox = new Map();
-
                     const allHomophones = new Array(65536);
                     for (let i = 0; i < 65536; i++) {
                         allHomophones[i] = i;
                     }
 
-                    // FIXED: Use full entropy from HMAC
+                    const generator = new OptimizedSBoxGenerator();
+                    
                     for (let i = 65535; i > 0; i--) {
-                        const hmac = await crypto.subtle.sign(
-                            'HMAC',
-                            hmacKey,
-                            new Uint8Array([i & 0xFF, (i >> 8) & 0xFF, (i >> 16) & 0xFF, (i >> 24) & 0xFF])
-                        );
-                        
-                        const hmacArray = new Uint8Array(hmac);
-                        // Use all 32 bits of entropy instead of just 16
-                        const randomValue = new DataView(hmacArray.buffer).getUint32(0, true);
-                        const j = randomValue % (i + 1);
-                        
+                        const j = await generator.getUniformRandom(i + 1, hmacKey);
                         [allHomophones[i], allHomophones[j]] = [allHomophones[j], allHomophones[i]];
                     }
+
+                    this.sbox = new Array(256);
+                    this.inverseSbox = new Map();
 
                     for (let inputByte = 0; inputByte < 256; inputByte++) {
                         this.sbox[inputByte] = new Array(256);
@@ -681,7 +696,6 @@
                 this.enableMixColumns = enabled;
             }
 
-            // Single round of MixColumns transformation
             applySingleMixColumnsRound(data) {
                 const result = new Uint8Array(data.length);
                 
@@ -706,7 +720,6 @@
                 return result;
             }
 
-            // Single round of Inverse MixColumns transformation
             applySingleInvMixColumnsRound(data) {
                 const result = new Uint8Array(data.length);
                 
@@ -735,7 +748,6 @@
                 return result;
             }
 
-            // Generate round-specific non-linearity constants
             generateRoundConstants(round) {
                 const constants = new Uint8Array(4);
                 for (let i = 0; i < 4; i++) {
@@ -744,17 +756,14 @@
                 return constants;
             }
 
-            // Enhanced multi-round MixColumns with non-linearity
             mixColumns(data) {
                 if (!this.enableMixColumns) return data;
 
                 let processedData = new Uint8Array(data);
                 
                 for (let round = 0; round < this.mixColumnsRounds; round++) {
-                    // Apply linear transformation
                     processedData = this.applySingleMixColumnsRound(processedData);
                     
-                    // Apply non-linearity between rounds
                     if (this.enableNonLinearity) {
                         const roundConstants = this.generateRoundConstants(round);
                         for (let i = 0; i < processedData.length; i++) {
@@ -766,14 +775,12 @@
                 return processedData;
             }
 
-            // Enhanced multi-round Inverse MixColumns
             invMixColumns(data) {
                 if (!this.enableMixColumns) return data;
 
                 let processedData = new Uint8Array(data);
                 
                 for (let round = this.mixColumnsRounds - 1; round >= 0; round--) {
-                    // Reverse non-linearity first
                     if (this.enableNonLinearity) {
                         const roundConstants = this.generateRoundConstants(round);
                         for (let i = 0; i < processedData.length; i++) {
@@ -781,7 +788,6 @@
                         }
                     }
                     
-                    // Apply inverse linear transformation
                     processedData = this.applySingleInvMixColumnsRound(processedData);
                 }
                 
@@ -1024,7 +1030,6 @@
             }
         }
 
-        // Cryptographic Test Suite
         class CipherTestSuite {
             static hexToBytes(hexString) {
                 const bytes = new Uint8Array(hexString.length / 2);
@@ -1184,7 +1189,6 @@
             }
         }
 
-        // Enhanced UI Controller
         class EnhancedCipherUIController {
             constructor() {
                 this.cipher = new EnhancedHomophonicCipher();
@@ -1535,8 +1539,8 @@
                     this.setStatus('ready', 'Security analysis complete');
                     document.getElementById('securityInfo').textContent = 
                         'Security Analysis:\n' +
-                        '• Deterministic S-Box generation (FIXED)\n' +
-                        '• Random salt for key derivation (IMPROVED)\n' +
+                        '• Deterministic S-Box generation\n' +
+                        '• Random salt for key derivation\n' +
                         '• 512-bit key material via PBKDF2-HMAC-SHA512\n' +
                         '• 65536-element homophonic S-Box\n' +
                         '• Non-deterministic encryption (semantic security)\n' +
@@ -1579,7 +1583,7 @@
                     info += `Non-linearity: ${nonLinearity ? 'Enabled' : 'Disabled'}\n`;
                 }
                 info += `Data length: ${length} ${format === 'binary' ? 'bytes' : 'characters'}\n`;
-                info += `S-Box: Deterministic generation (FIXED)\n`;
+                info += `S-Box: Deterministic generation\n`;
                 info += `Key: PBKDF2-HMAC-SHA512 with random salt`;
                 
                 document.getElementById('securityInfo').textContent = info;
@@ -1620,7 +1624,6 @@
             }
         }
 
-        // Initialize the application
         document.addEventListener('DOMContentLoaded', () => {
             new EnhancedCipherUIController();
         });
