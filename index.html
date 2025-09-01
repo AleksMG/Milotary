@@ -353,7 +353,7 @@
     <div class="container">
         <header>
             <h1>Enhanced Homophonic Cipher System</h1>
-            <p class="subtitle">Military-grade encryption with multi-round MixColumns and ShiftRows transformations</p>
+            <p class="subtitle">Military-grade encryption with multi-round MixColumns transformation</p>
         </header>
 
         <div class="grid">
@@ -418,13 +418,6 @@
                                 <option value="6">6 Rounds (Strong)</option>
                                 <option value="12">12 Rounds (Maximum)</option>
                             </select>
-                        </div>
-                    </div>
-                    
-                    <div class="option-row">
-                        <div class="option-label">Enable ShiftRows:</div>
-                        <div class="option-control">
-                            <input type="checkbox" id="enableShiftRows" checked>
                         </div>
                     </div>
                     
@@ -522,7 +515,7 @@
         </div>
 
         <div class="footer">
-            <p>Enhanced Homophonic Cipher System v4.3 | Optimized Implementation</p>
+            <p>Enhanced Homophonic Cipher System v4.2 | Optimized Implementation</p>
             <p>© 2024 Cryptographic Systems | All operations performed client-side</p>
         </div>
     </div>
@@ -542,90 +535,50 @@
             }
         }
 
-        class OptimizedSBoxGenerator {
+        class DeterministicSBoxGenerator {
             static async generateSBox(encryptionKey) {
+                const sbox = new Array(256);
+                const inverseSbox = new Map();
+                
                 const hmacKey = await crypto.subtle.importKey(
                     'raw',
                     encryptionKey,
-                    { name: 'HMAC', hash: 'SHA-512' },
+                    { name: 'HMAC', hash: 'SHA-256' },
                     false,
                     ['sign']
                 );
                 
-                // Generate homophones array (65536 values)
-                const homophones = await this.generateHomophones(hmacKey);
-                
-                // Apply Fisher-Yates shuffle for perfect randomness
-                await this.optimizedFisherYatesShuffle(homophones, hmacKey);
-                
-                // Format to S-Box structure (256x256)
-                return this.formatToSBox(homophones);
-            }
-            
-            static async generateHomophones(hmacKey) {
-                const totalHomophones = 65536;
-                const homophonesPerBlock = 32; // 512 bits / 16 bits per homophone
-                const blocks = Math.ceil(totalHomophones / homophonesPerBlock);
-                
-                const homophones = new Uint16Array(totalHomophones);
-                
-                for (let block = 0; block < blocks; block++) {
-                    const hmac = await this.getHmacBlock(hmacKey, block);
-                    const values = new Uint16Array(hmac.slice(0, 64)); // 32 values
-                    
-                    for (let i = 0; i < homophonesPerBlock; i++) {
-                        const index = block * homophonesPerBlock + i;
-                        if (index < totalHomophones) {
-                            homophones[index] = values[i];
-                        }
-                    }
+                const allHomophones = new Array(65536);
+                for (let i = 0; i < 65536; i++) {
+                    allHomophones[i] = i;
                 }
                 
-                return homophones;
-            }
-            
-            static async optimizedFisherYatesShuffle(array, hmacKey) {
-                const n = array.length;
-                const swapsPerBlock = 32; // 512 bits / 16 bits per index
-                const totalBlocks = Math.ceil((n - 1) / swapsPerBlock);
-                
-                for (let block = 0; block < totalBlocks; block++) {
-                    const hmac = await this.getHmacBlock(hmacKey, n + block); // Unique seed
-                    const indices = new Uint16Array(hmac.slice(0, 64)); // 32 indices
-                    
-                    for (let i = 0; i < swapsPerBlock; i++) {
-                        const currentIndex = n - 1 - (block * swapsPerBlock + i);
-                        if (currentIndex <= 0) break;
-                        
-                        const randomIndex = indices[i] % (currentIndex + 1);
-                        
-                        // Swap elements
-                        const temp = array[currentIndex];
-                        array[currentIndex] = array[randomIndex];
-                        array[randomIndex] = temp;
-                    }
-                }
-            }
-            
-            static async getHmacBlock(hmacKey, blockIndex) {
-                const data = new Uint32Array([blockIndex]);
-                return await crypto.subtle.sign('HMAC', hmacKey, data);
-            }
-            
-            static formatToSBox(homophones) {
-                const sbox = new Array(256);
-                const inverseSbox = new Map();
+                await this.deterministicShuffle(allHomophones, hmacKey);
                 
                 for (let inputByte = 0; inputByte < 256; inputByte++) {
                     sbox[inputByte] = new Array(256);
                     for (let homophoneIndex = 0; homophoneIndex < 256; homophoneIndex++) {
-                        const homophone = homophones[inputByte * 256 + homophoneIndex];
+                        const homophone = allHomophones[inputByte * 256 + homophoneIndex];
                         sbox[inputByte][homophoneIndex] = homophone;
                         inverseSbox.set(homophone, inputByte);
                     }
                 }
                 
                 return { sbox, inverseSbox };
+            }
+            
+            static async deterministicShuffle(array, hmacKey) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = await this.getDeterministicIndex(i + 1, hmacKey, i);
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+            
+            static async getDeterministicIndex(max, hmacKey, seed) {
+                const data = new Uint32Array([seed]);
+                const hmac = await crypto.subtle.sign('HMAC', hmacKey, data);
+                const view = new DataView(hmac);
+                return view.getUint32(0) % max;
             }
         }
 
@@ -639,17 +592,12 @@
                 this.outputFormat = 'hex';
                 this.enableMixColumns = true;
                 this.mixColumnsRounds = 3;
-                this.enableShiftRows = true;
                 this.enableNonLinearity = true;
             }
 
             setMixColumnsRounds(rounds) {
                 const validRounds = [1, 3, 6, 12];
                 this.mixColumnsRounds = validRounds.includes(rounds) ? rounds : 1;
-            }
-
-            setShiftRows(enabled) {
-                this.enableShiftRows = enabled;
             }
 
             setNonLinearity(enabled) {
@@ -686,7 +634,7 @@
                     const encryptionKey = derivedBuffer.slice(0, 32);
                     this.hmacKey = derivedBuffer.slice(32, 64);
 
-                    const { sbox, inverseSbox } = await OptimizedSBoxGenerator.generateSBox(encryptionKey);
+                    const { sbox, inverseSbox } = await DeterministicSBoxGenerator.generateSBox(encryptionKey);
                     this.sbox = sbox;
                     this.inverseSbox = inverseSbox;
                     
@@ -714,42 +662,6 @@
 
             setMixColumns(enabled) {
                 this.enableMixColumns = enabled;
-            }
-
-            applyShiftRows(homophonesBlock) {
-                if (!this.enableShiftRows) return homophonesBlock;
-                
-                // For 16-byte block (8 homophones of 2 bytes each)
-                const shifted = new Uint16Array(8);
-                
-                // AES-like shifting (adapted for 16-bit values)
-                shifted[0] = homophonesBlock[0];  // No shift
-                shifted[1] = homophonesBlock[5];  // Shift 1
-                shifted[2] = homophonesBlock[2];  // No shift  
-                shifted[3] = homophonesBlock[7];  // Shift 3
-                shifted[4] = homophonesBlock[4];  // No shift
-                shifted[5] = homophonesBlock[1];  // Shift 1
-                shifted[6] = homophonesBlock[6];  // No shift
-                shifted[7] = homophonesBlock[3];  // Shift 3
-                
-                return shifted;
-            }
-
-            applyInvShiftRows(homophonesBlock) {
-                if (!this.enableShiftRows) return homophonesBlock;
-                
-                const shifted = new Uint16Array(8);
-                
-                shifted[0] = homophonesBlock[0];
-                shifted[1] = homophonesBlock[5];
-                shifted[2] = homophonesBlock[2];
-                shifted[3] = homophonesBlock[7];
-                shifted[4] = homophonesBlock[4];
-                shifted[5] = homophonesBlock[1];
-                shifted[6] = homophonesBlock[6];
-                shifted[7] = homophonesBlock[3];
-                
-                return shifted;
             }
 
             applySingleMixColumnsRound(data) {
@@ -904,11 +816,6 @@
                         }
                     }
                     
-                    // Apply ShiftRows permutation if enabled
-                    if (this.enableShiftRows) {
-                        ciphertext = this.applyShiftRowsToCiphertext(ciphertext);
-                    }
-                    
                     let outputBuffer;
                     if (this.enableMixColumns) {
                         const ciphertextBytes = new Uint8Array(ciphertext.buffer);
@@ -944,52 +851,6 @@
                 }
             }
 
-            applyShiftRowsToCiphertext(ciphertext) {
-                if (!this.enableShiftRows) return ciphertext;
-                
-                const result = new Uint16Array(ciphertext.length);
-                
-                // Process in blocks of 8 homophones (16 bytes)
-                for (let i = 0; i < ciphertext.length; i += 8) {
-                    if (i + 7 >= ciphertext.length) {
-                        // Copy remaining homophones without shifting
-                        for (let j = i; j < ciphertext.length; j++) {
-                            result[j] = ciphertext[j];
-                        }
-                        break;
-                    }
-                    
-                    const block = ciphertext.slice(i, i + 8);
-                    const shiftedBlock = this.applyShiftRows(block);
-                    result.set(shiftedBlock, i);
-                }
-                
-                return result;
-            }
-
-            applyInvShiftRowsToCiphertext(ciphertext) {
-                if (!this.enableShiftRows) return ciphertext;
-                
-                const result = new Uint16Array(ciphertext.length);
-                
-                // Process in blocks of 8 homophones (16 bytes)
-                for (let i = 0; i < ciphertext.length; i += 8) {
-                    if (i + 7 >= ciphertext.length) {
-                        // Copy remaining homophones without shifting
-                        for (let j = i; j < ciphertext.length; j++) {
-                            result[j] = ciphertext[j];
-                        }
-                        break;
-                    }
-                    
-                    const block = ciphertext.slice(i, i + 8);
-                    const shiftedBlock = this.applyInvShiftRows(block);
-                    result.set(shiftedBlock, i);
-                }
-                
-                return result;
-            }
-
             async decryptData(encryptedData, diffusionMode = 'cbc') {
                 try {
                     let inputBuffer;
@@ -1021,12 +882,7 @@
                         ciphertextBytes = this.invMixColumns(ciphertextBytes);
                     }
                     
-                    let ciphertext = new Uint16Array(ciphertextBytes.buffer);
-                    
-                    // Apply inverse ShiftRows if enabled
-                    if (this.enableShiftRows) {
-                        ciphertext = this.applyInvShiftRowsToCiphertext(ciphertext);
-                    }
+                    const ciphertext = new Uint16Array(ciphertextBytes.buffer);
                     
                     let plaintextBuffer = new Uint8Array(ciphertext.length);
                     let previousBlock = iv;
@@ -1304,7 +1160,6 @@
                 const generateBtn = document.getElementById('generateCharset');
                 const enableMixColumns = document.getElementById('enableMixColumns');
                 const mixColumnsRounds = document.getElementById('mixColumnsRounds');
-                const enableShiftRows = document.getElementById('enableShiftRows');
                 const enableNonLinearity = document.getElementById('enableNonLinearity');
 
                 encryptBtn.addEventListener('click', () => this.handleEncrypt());
@@ -1327,10 +1182,6 @@
                 });
                 mixColumnsRounds.addEventListener('change', () => {
                     this.cipher.setMixColumnsRounds(parseInt(mixColumnsRounds.value));
-                    this.saveSettings();
-                });
-                enableShiftRows.addEventListener('change', () => {
-                    this.cipher.setShiftRows(enableShiftRows.checked);
                     this.saveSettings();
                 });
                 enableNonLinearity.addEventListener('change', () => {
@@ -1429,7 +1280,6 @@
                     customCharset: document.getElementById('customCharset').value,
                     enableMixColumns: document.getElementById('enableMixColumns').checked,
                     mixColumnsRounds: document.getElementById('mixColumnsRounds').value,
-                    enableShiftRows: document.getElementById('enableShiftRows').checked,
                     enableNonLinearity: document.getElementById('enableNonLinearity').checked
                 };
                 localStorage.setItem('cipherSettings', JSON.stringify(settings));
@@ -1445,12 +1295,10 @@
                     document.getElementById('customCharset').value = settings.customCharset;
                     document.getElementById('enableMixColumns').checked = settings.enableMixColumns;
                     document.getElementById('mixColumnsRounds').value = settings.mixColumnsRounds;
-                    document.getElementById('enableShiftRows').checked = settings.enableShiftRows;
                     document.getElementById('enableNonLinearity').checked = settings.enableNonLinearity;
                     
                     this.cipher.setMixColumns(settings.enableMixColumns);
                     this.cipher.setMixColumnsRounds(parseInt(settings.mixColumnsRounds));
-                    this.cipher.setShiftRows(settings.enableShiftRows);
                     this.cipher.setNonLinearity(settings.enableNonLinearity);
                     this.handleOutputFormatChange();
                     this.updateCharsetPreview();
@@ -1650,7 +1498,6 @@
                         '• Non-deterministic encryption (semantic security)\n' +
                         '• Multiple output formats support\n' +
                         '• Multi-round MixColumns transformation\n' +
-                        '• ShiftRows permutation (AES-like)\n' +
                         '• Inter-round non-linearity enhancement\n' +
                         '• Multiple diffusion modes (CBC, CFB, OFB)';
                 }, 1000);
@@ -1676,8 +1523,7 @@
                 const format = document.getElementById('outputFormat').value;
                 const diffusionMode = document.getElementById('diffusionMode').value;
                 const mixColumns = document.getElementById('enableMixColumns').checked;
-                const mixRounds = document.getElementById('mixColumnsRounds').value;
-                const shiftRows = document.getElementById('enableShiftRows').checked;
+                const rounds = document.getElementById('mixColumnsRounds').value;
                 const nonLinearity = document.getElementById('enableNonLinearity').checked;
                 
                 let info = `Operation: ${operation.toUpperCase()}\n`;
@@ -1685,12 +1531,11 @@
                 info += `Diffusion mode: ${diffusionMode}\n`;
                 info += `MixColumns: ${mixColumns ? 'Enabled' : 'Disabled'}\n`;
                 if (mixColumns) {
-                    info += `MixColumns rounds: ${mixRounds}\n`;
+                    info += `MixColumns rounds: ${rounds}\n`;
+                    info += `Non-linearity: ${nonLinearity ? 'Enabled' : 'Disabled'}\n`;
                 }
-                info += `ShiftRows: ${shiftRows ? 'Enabled' : 'Disabled'}\n`;
-                info += `Non-linearity: ${nonLinearity ? 'Enabled' : 'Disabled'}\n`;
                 info += `Data length: ${length} ${format === 'binary' ? 'bytes' : 'characters'}\n`;
-                info += `S-Box: Optimized generation (4096 HMAC calls)\n`;
+                info += `S-Box: Deterministic generation\n`;
                 info += `Key: PBKDF2-HMAC-SHA512 with password-based salt`;
                 
                 document.getElementById('securityInfo').textContent = info;
